@@ -1,0 +1,25 @@
+{
+  "name": "buzzkill",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev:web": "npm run dev -w apps/web",
+    "dev:server": "npm run dev -w apps/server",
+    "dev": "concurrently \"npm:dev:web\" \"npm:dev:server\"",
+    "build": "npm run build -w apps/web && npm run build -w apps/server",
+    "start": "concurrently \"npm:start:web\" \"npm:start:server\"",
+    "start:web": "npm run start -w apps/web",
+    "start:server": "npm run start -w apps/server"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
