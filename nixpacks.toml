@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs"]
 
 [phases.install]
-cmds = ["npm ci"]
+cmds = ["npm ci", "cd apps/server && npx prisma generate"]
 
 [phases.build]
-cmds = ["npm run build --workspace=server", "npm run build --workspace=web"]
+cmds = ["npm run build"]
 
 [start]
 cmd = "npm run start"
