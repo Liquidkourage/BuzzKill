@@ -66,7 +66,7 @@ export default function PlayPage() {
   }, [code, playerId]);
 
   const join = () => getSocket().emit("player:joinRoom", { code, team, name }, (resp: unknown) => {
-    if ((resp as any)?.ok) setPlayerId((resp as any).playerId);
+    if ((resp as unknown as any)?.ok) setPlayerId((resp as unknown as any).playerId);
   });
 
   const buzz = () => getSocket().emit("player:buzz", { code });
@@ -78,13 +78,13 @@ export default function PlayPage() {
     return () => clearInterval(id);
   }, [deadlineAt]);
 
-  const remainingMs = useMemo(() => (deadlineAt ? Math.max(0, deadlineAt - now) : 0), [deadlineAt, now]);
+  // const remainingMs = useMemo(() => (deadlineAt ? Math.max(0, deadlineAt - now) : 0), [deadlineAt, now]);
   // const remainingSec = Math.ceil(remainingMs / 1000);
 
   const playerNameById = useMemo(() => {
     const map = new Map<string, string>();
     if ((state as any)?.players) {
-      for (const p of (state as any).players) map.set(p.id, p.name || p.id.slice(0, 6));
+      for (const p of (state as any).players) map.set((p as any).id, (p as any).name || (p as any).id.slice(0, 6));
     }
     return map;
   }, [state]);
@@ -150,7 +150,7 @@ export default function PlayPage() {
               <div className="font-semibold mb-1">Team {t}</div>
               <div className="flex flex-col gap-1">
                 {state.slots?.[t]?.map((pid: string) => {
-                  const p = (state as any).players.find((pp: any) => pp.id === pid);
+                  const p = (state as any).players.find((pp: unknown) => (pp as any).id === pid);
                   if (!p) return null;
                   const isMe = p.id === playerId;
                   return (

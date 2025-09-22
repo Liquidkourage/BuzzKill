@@ -9,16 +9,16 @@ interface MatchEvent {
   createdAt: string;
 }
 
-interface Match {
-  id: string;
-  code: string;
-  status: string;
-  scoreA: number;
-  scoreB: number;
-  overtime: boolean;
-  createdAt: string;
-  events?: MatchEvent[];
-}
+// interface Match {
+//   id: string;
+//   code: string;
+//   status: string;
+//   scoreA: number;
+//   scoreB: number;
+//   overtime: boolean;
+//   createdAt: string;
+//   events?: MatchEvent[];
+// }
 
 async function fetchMatch(id: string) {
 	const base = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:4000";

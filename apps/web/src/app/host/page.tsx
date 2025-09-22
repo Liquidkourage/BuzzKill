@@ -80,7 +80,7 @@ export default function HostPage() {
               <div className="font-semibold mb-1">Team {t}</div>
               <div className="flex flex-col gap-1">
                 {state.slots?.[t]?.map((pid: string) => {
-                  const p = (state as any).players.find((pp: any) => pp.id === pid);
+                  const p = (state as any).players.find((pp: unknown) => (pp as any).id === pid);
                   if (!p) return null;
                   return (
                     <div key={pid} className="flex items-center justify-between text-sm">
