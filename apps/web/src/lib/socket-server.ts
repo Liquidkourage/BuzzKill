@@ -1,12 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { Server as SocketIOServer } from 'socket.io';
-import { createServer } from 'http';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 // Game state
 const rooms = new Map();
-const latencyMsByPlayer = new Map();
 
 export function createSocketServer(httpServer: any) {
   const io = new SocketIOServer(httpServer, {
@@ -19,7 +18,7 @@ export function createSocketServer(httpServer: any) {
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
 
-    socket.on('host:createRoom', async (data) => {
+    socket.on('host:createRoom', async () => {
       try {
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         const room = {
@@ -39,7 +38,7 @@ export function createSocketServer(httpServer: any) {
         socket.emit('host:roomCreated', { code });
         
         // Save to database
-        const match = await prisma.match.create({
+        await prisma.match.create({
           data: {
             code,
             hostId: socket.id,
