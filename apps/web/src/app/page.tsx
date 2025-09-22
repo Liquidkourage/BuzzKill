@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { getSocket } from "@/lib/socket";
 
 export default function Home() {
@@ -23,7 +24,7 @@ export default function Home() {
       <div className="flex gap-3">
         <a className="btn-secondary" href="/host">Host</a>
         <a className="btn-secondary" href="/play">Play</a>
-        <a className="btn-secondary" href="/admin/matches">Admin</a>
+        <Link className="btn-secondary" href="/admin/matches">Admin</Link>
       </div>
     </main>
   );

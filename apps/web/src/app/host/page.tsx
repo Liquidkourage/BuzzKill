@@ -7,8 +7,7 @@ import BigTimer from "@/components/BigTimer";
 
 export default function HostPage() {
   const [code, setCode] = useState<string>("");
-  const [state, setState] = useState<any>(null);
-  const [rtts, setRtts] = useState<Record<string, number>>({});
+  const [state, setState] = useState<unknown>(null);
 
   useEffect(() => {
     const socket = getSocket();
@@ -81,7 +80,7 @@ export default function HostPage() {
               <div className="font-semibold mb-1">Team {t}</div>
               <div className="flex flex-col gap-1">
                 {state.slots?.[t]?.map((pid: string) => {
-                  const p = state.players.find((pp: any) => pp.id === pid);
+                  const p = (state as any).players.find((pp: any) => pp.id === pid);
                   if (!p) return null;
                   return (
                     <div key={pid} className="flex items-center justify-between text-sm">

@@ -1,4 +1,16 @@
+import Link from "next/link";
+
 export const dynamic = "force-dynamic";
+
+interface Match {
+  id: string;
+  code: string;
+  status: string;
+  scoreA: number;
+  scoreB: number;
+  overtime: boolean;
+  createdAt: string;
+}
 
 async function fetchMatches() {
 	const base = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:4000";
@@ -7,8 +19,8 @@ async function fetchMatches() {
 		if (!res.ok) return { matches: [], error: `Failed to load (${res.status})` };
 		const data = await res.json();
 		return { matches: Array.isArray(data?.matches) ? data.matches : [], error: null };
-	} catch (e: any) {
-		return { matches: [], error: e?.message || "Failed to load matches" };
+	} catch (e: unknown) {
+		return { matches: [], error: e instanceof Error ? e.message : "Failed to load matches" };
 	}
 }
 
@@ -26,7 +38,7 @@ export default async function AdminMatchesPage() {
 		<main className="p-6 max-w-4xl mx-auto flex flex-col gap-4">
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-bold">Admin · Matches</h1>
-				<a className="btn-secondary" href="/">Home</a>
+				<Link className="btn-secondary" href="/">Home</Link>
 			</div>
 			{error && <div className="text-sm text-red-600">{error}</div>}
 			<div className="hud-card p-3 overflow-auto">
@@ -41,10 +53,10 @@ export default async function AdminMatchesPage() {
 						</tr>
 					</thead>
 					<tbody>
-						{matches.map((m: any) => (
+						{matches.map((m: Match) => (
 							<tr key={m.id} className="border-t border-white/10">
 								<td className="py-2 pr-3">
-									<a className="text-blue-400 underline" href={`/admin/matches/${m.id}`}>{m.code}</a>
+									<Link className="text-blue-400 underline" href={`/admin/matches/${m.id}`}>{m.code}</Link>
 								</td>
 								<td className="py-2 pr-3">{m.status}</td>
 								<td className="py-2 pr-3">{m.scoreA} - {m.scoreB}</td>

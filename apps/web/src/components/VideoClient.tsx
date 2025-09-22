@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Room, RoomEvent, createLocalTracks, RemoteTrack, Track } from "livekit-client";
+import { Room, RoomEvent, createLocalTracks, RemoteTrack } from "livekit-client";
 
 export default function VideoClient({ code, identity }: { code: string; identity: string }) {
   const [room, setRoom] = useState<Room | null>(null);
@@ -18,28 +19,28 @@ export default function VideoClient({ code, identity }: { code: string; identity
   // Expose publishing helper so UI handlers can republish (e.g., when switching camera)
   const publishTracksWithRetry = useCallback(async (targetRoom: Room, videoOnly = false) => {
     try {
-      const createOpts: any = {};
+      const createOpts: Record<string, unknown> = {};
       if (videoOnly) {
         createOpts.video = selectedDeviceId ? { deviceId: selectedDeviceId } : true;
       } else {
         createOpts.audio = true;
         createOpts.video = selectedDeviceId ? { deviceId: selectedDeviceId } : true;
       }
-      const tracks = await createLocalTracks(createOpts);
+      const tracks = await createLocalTracks(createOpts as any);
       for (const t of tracks) {
         try {
           await targetRoom.localParticipant.publishTrack(t);
-        } catch (pubErr: any) {
-          setError(pubErr?.message || "Failed to publish track");
+        } catch (pubErr: unknown) {
+          setError(pubErr instanceof Error ? pubErr.message : "Failed to publish track");
         }
       }
       // Attach local video directly from created tracks
-      const localCamTrack = tracks.find((tr: any) => tr.kind === "video");
+      const localCamTrack = tracks.find((tr: any) => (tr as any).kind === "video");
       if (localCamTrack && localVideoEl) {
         try { (localCamTrack as any).attach(localVideoEl); } catch { /* noop */ }
       }
-    } catch (err: any) {
-      setError(err?.message || "Could not access mic/camera");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Could not access mic/camera");
     }
   }, [selectedDeviceId, localVideoEl]);
 

@@ -12,7 +12,7 @@ export default function PlayPage() {
   const [name, setName] = useState<string>("");
   const [team, setTeam] = useState<TeamId>("A");
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const [state, setState] = useState<any>(null);
+  const [state, setState] = useState<unknown>(null);
   const [eligibleTargets, setEligibleTargets] = useState<string[]>([]);
   const [deadlineAt, setDeadlineAt] = useState<number | null>(null);
   const [timerLabel, setTimerLabel] = useState<string>("");
@@ -65,8 +65,8 @@ export default function PlayPage() {
     return () => { cancelled = true; clearInterval(id); };
   }, [code, playerId]);
 
-  const join = () => getSocket().emit("player:joinRoom", { code, team, name }, (resp: any) => {
-    if (resp?.ok) setPlayerId(resp.playerId);
+  const join = () => getSocket().emit("player:joinRoom", { code, team, name }, (resp: unknown) => {
+    if ((resp as any)?.ok) setPlayerId((resp as any).playerId);
   });
 
   const buzz = () => getSocket().emit("player:buzz", { code });
@@ -79,12 +79,12 @@ export default function PlayPage() {
   }, [deadlineAt]);
 
   const remainingMs = useMemo(() => (deadlineAt ? Math.max(0, deadlineAt - now) : 0), [deadlineAt, now]);
-  const remainingSec = Math.ceil(remainingMs / 1000);
+  // const remainingSec = Math.ceil(remainingMs / 1000);
 
   const playerNameById = useMemo(() => {
     const map = new Map<string, string>();
-    if (state?.players) {
-      for (const p of state.players) map.set(p.id, p.name || p.id.slice(0, 6));
+    if ((state as any)?.players) {
+      for (const p of (state as any).players) map.set(p.id, p.name || p.id.slice(0, 6));
     }
     return map;
   }, [state]);
@@ -150,7 +150,7 @@ export default function PlayPage() {
               <div className="font-semibold mb-1">Team {t}</div>
               <div className="flex flex-col gap-1">
                 {state.slots?.[t]?.map((pid: string) => {
-                  const p = state.players.find((pp: any) => pp.id === pid);
+                  const p = (state as any).players.find((pp: any) => pp.id === pid);
                   if (!p) return null;
                   const isMe = p.id === playerId;
                   return (

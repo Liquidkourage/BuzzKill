@@ -1,4 +1,24 @@
+import Link from "next/link";
+
 export const dynamic = "force-dynamic";
+
+interface MatchEvent {
+  id: string;
+  type: string;
+  payload: unknown;
+  createdAt: string;
+}
+
+interface Match {
+  id: string;
+  code: string;
+  status: string;
+  scoreA: number;
+  scoreB: number;
+  overtime: boolean;
+  createdAt: string;
+  events?: MatchEvent[];
+}
 
 async function fetchMatch(id: string) {
 	const base = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:4000";
@@ -7,8 +27,8 @@ async function fetchMatch(id: string) {
 		if (!res.ok) return { match: null, error: `Failed to load (${res.status})` };
 		const data = await res.json();
 		return { match: data?.match ?? null, error: null };
-	} catch (e: any) {
-		return { match: null, error: e?.message || "Failed to load match" };
+	} catch (e: unknown) {
+		return { match: null, error: e instanceof Error ? e.message : "Failed to load match" };
 	}
 }
 
@@ -23,7 +43,7 @@ export default async function AdminMatchDetailPage({ params }: { params: { id: s
 		<main className="p-6 max-w-4xl mx-auto flex flex-col gap-4">
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-bold">Admin · Match</h1>
-				<a className="btn-secondary" href="/admin/matches">Back</a>
+				<Link className="btn-secondary" href="/admin/matches">Back</Link>
 			</div>
 			{error && <div className="text-sm text-red-600">{error}</div>}
 			{!match ? (
@@ -47,7 +67,7 @@ export default async function AdminMatchDetailPage({ params }: { params: { id: s
 								</tr>
 							</thead>
 							<tbody>
-								{(match.events || []).map((ev: any) => (
+								{(match.events || []).map((ev: MatchEvent) => (
 									<tr key={ev.id} className="border-t border-white/10">
 										<td className="py-2 pr-3 whitespace-nowrap">{formatDate(ev.createdAt)}</td>
 										<td className="py-2 pr-3">{ev.type}</td>
