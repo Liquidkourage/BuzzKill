@@ -1,4 +1,4 @@
-import { PrismaClient } from "./generated/prisma";
+import { PrismaClient } from "@prisma/client";
 
 // Singleton Prisma client with connection error handling
 export const prisma = new PrismaClient({
