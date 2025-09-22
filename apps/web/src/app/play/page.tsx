@@ -150,7 +150,7 @@ export default function PlayPage() {
             <div key={t} className="hud-card p-2">
               <div className="font-semibold mb-1">Team {t}</div>
               <div className="flex flex-col gap-1">
-                {state.slots?.[t]?.map((pid: string) => {
+                {(state as any).slots?.[t]?.map((pid: string) => {
                   const p = (state as any).players.find((pp: unknown) => (pp as any).id === pid);
                   if (!p) return null;
                   const isMe = p.id === playerId;
