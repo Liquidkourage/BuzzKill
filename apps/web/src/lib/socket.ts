@@ -6,7 +6,21 @@ export function getSocket(): Socket {
   if (!socketInstance) {
     // Connect to the server service
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:4000";
-    socketInstance = io(serverUrl, { transports: ["websocket"], autoConnect: true });
+    console.log('Connecting to server:', serverUrl);
+    socketInstance = io(serverUrl, { 
+      transports: ["websocket"], 
+      autoConnect: true,
+      timeout: 5000,
+      forceNew: true
+    });
+    
+    socketInstance.on('connect', () => {
+      console.log('Socket connected to:', serverUrl);
+    });
+    
+    socketInstance.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
   }
   return socketInstance;
 }
