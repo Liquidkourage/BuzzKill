@@ -7,7 +7,7 @@
     "dev:server": "npm run dev -w apps/server",
     "dev": "concurrently \"npm:dev:web\" \"npm:dev:server\"",
     "build": "npm run build -w apps/web && npm run build -w apps/server",
-    "start": "concurrently \"npm:start:web\" \"npm:start:server\"",
+    "start": "concurrently \"PORT=3000 npm run start -w apps/web\" \"PORT=4000 npm run start -w apps/server\"",
     "start:web": "npm run start -w apps/web",
     "start:server": "npm run start -w apps/server"
   },
