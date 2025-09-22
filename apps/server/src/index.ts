@@ -132,6 +132,26 @@ app.get("/livekit/debug", (_req, res) => {
 });
 
 // LiveKit token endpoint
+// Health check endpoint
+app.get("/health", async (req, res) => {
+  try {
+    // Test database connection
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ 
+      status: "healthy", 
+      timestamp: new Date().toISOString(),
+      database: "connected"
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: "unhealthy", 
+      timestamp: new Date().toISOString(),
+      database: "disconnected",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 app.get("/livekit/token", async (req, res) => {
   try {
     const room = String(req.query.code || "");
@@ -572,6 +592,34 @@ io.on("connection", (socket) => {
     if (state.matchId)
       prisma.matchEvent.create({ data: { matchId: state.matchId, type: "incorrect_steal", payload: {} } }).catch(() => {});
     advanceAfterQuestion(state);
+  });
+});
+
+// Error handling for uncaught exceptions and unhandled rejections
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Don't exit immediately, let the process handle it gracefully
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit immediately, let the process handle it gracefully
+});
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
   });
 });
 
