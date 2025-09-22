@@ -5,7 +5,7 @@ nixPkgs = ["nodejs"]
 cmds = ["npm ci"]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["npm run build --workspace=server", "npm run build --workspace=web"]
 
 [start]
 cmd = "npm run start"

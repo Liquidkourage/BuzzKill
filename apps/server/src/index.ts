@@ -281,7 +281,7 @@ io.on("connection", (socket) => {
     // Persist Match (fire-and-forget)
     prisma.match
       .create({ data: { code, status: "live", teamA: { create: { name: `Team A ${code}` } }, teamB: { create: { name: `Team B ${code}` } } } })
-      .then((m) => {
+      .then((m: any) => {
         state.matchId = m.id;
         return prisma.matchEvent.create({ data: { matchId: m.id, type: "room_created", payload: { code } } });
       })
