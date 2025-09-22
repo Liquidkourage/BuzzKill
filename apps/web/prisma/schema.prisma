@@ -1,0 +1,90 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  email     String   @unique
+  name      String?
+  // relations
+  memberships TeamMember[]
+}
+
+model Team {
+  id        String      @id @default(cuid())
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  name      String
+  // relations
+  members   TeamMember[]
+  homeMatches Match[]    @relation("homeMatches")
+  awayMatches Match[]    @relation("awayMatches")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  role      String   // e.g., player, captain
+  // fks
+  userId String
+  teamId String
+  user   User @relation(fields: [userId], references: [id])
+  team   Team @relation(fields: [teamId], references: [id])
+
+  @@unique([userId, teamId])
+}
+
+model Match {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  code         String   @unique // room code used
+  status       String   // scheduled, live, completed
+  maxQuestions Int      @default(20)
+  scoreA       Int      @default(0)
+  scoreB       Int      @default(0)
+  overtime     Boolean  @default(false)
+  // team relations
+  teamAId String
+  teamBId String
+  teamA   Team   @relation("homeMatches", fields: [teamAId], references: [id])
+  teamB   Team   @relation("awayMatches", fields: [teamBId], references: [id])
+  // events
+  events MatchEvent[]
+  // questions assigned (optional)
+  questions Question[]
+}
+
+model MatchEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  type      String   // open, lock, correct_initial, incorrect_initial, steal_open, correct_steal, incorrect_steal, kill_applied, timeout, end
+  payload   Json
+  // fks
+  matchId String
+  match   Match @relation(fields: [matchId], references: [id])
+}
+
+model Question {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  prompt    String
+  answer    String
+  category  String?
+  difficulty String?
+  // Optional: assignment to match
+  matchId String?
+  match   Match? @relation(fields: [matchId], references: [id])
+}
