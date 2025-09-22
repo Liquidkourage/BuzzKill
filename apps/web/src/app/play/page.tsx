@@ -97,19 +97,19 @@ export default function PlayPage() {
       {state && (
         <div className="hud-card p-4 grid grid-cols-3 gap-3 items-center">
           <div className="text-2xl display">
-            <span className="team-a">Team A</span> <span className="score-pill">{state?.scores?.A ?? 0}</span>
+            <span className="team-a">Team A</span> <span className="score-pill">{(state as any)?.scores?.A ?? 0}</span>
             <span className="mx-2 opacity-50">•</span>
-            <span className="score-pill">{state?.scores?.B ?? 0}</span> <span className="team-b">Team B</span>
+            <span className="score-pill">{(state as any)?.scores?.B ?? 0}</span> <span className="team-b">Team B</span>
           </div>
           <div className="text-center opacity-90">
-            Question {Number(state?.questionIndex ?? 0) + 1} / {state?.maxQuestions ?? 20}
-            <span className="ml-2 phase-pill">{state?.phase?.kind}</span>
-            {state?.overtime ? <span className="ml-2 phase-pill">overtime</span> : null}
+            Question {Number((state as any)?.questionIndex ?? 0) + 1} / {(state as any)?.maxQuestions ?? 20}
+            <span className="ml-2 phase-pill">{(state as any)?.phase?.kind}</span>
+            {(state as any)?.overtime ? <span className="ml-2 phase-pill">overtime</span> : null}
           </div>
           <div className="text-right text-sm opacity-80">{rtt != null ? `${rtt}ms` : ''}</div>
         </div>
       )}
-      {state?.overtime && (
+      {(state as any)?.overtime && (
         <div className="hud-card p-3 text-center text-lg">
           Sudden Death Overtime — first correct answer wins
         </div>
@@ -132,7 +132,7 @@ export default function PlayPage() {
 
       {playerId && code && <VideoClient code={code} identity={playerId} />}
 
-      {eligibleTargets.length > 0 && !state?.overtime && (
+      {eligibleTargets.length > 0 && !(state as any)?.overtime && (
         <div className="flex gap-2 items-center flex-wrap">
           <span className="opacity-70">Select opponent to kill:</span>
           {eligibleTargets.map((pid) => (
@@ -144,7 +144,7 @@ export default function PlayPage() {
       )}
 
       {/* Slotted players with buzz counts */}
-      {state?.players && (
+      {(state as any)?.players && (
         <div className="grid grid-cols-2 gap-3">
           {(["A","B"] as const).map((t) => (
             <div key={t} className="hud-card p-2">
