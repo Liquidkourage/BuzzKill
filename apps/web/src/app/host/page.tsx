@@ -74,7 +74,7 @@ export default function HostPage() {
         <button className="btn-secondary" onClick={markIncorrectSteal} disabled={!code}>Incorrect (Steal)</button>
       </div>
       {/* Slotted players with buzz counts + RTT if available */}
-      {state?.players && (
+      {(state as any)?.players && (
         <div className="grid grid-cols-2 gap-3">
           {(["A","B"] as const).map((t) => (
             <div key={t} className="hud-card p-2">
