@@ -37,14 +37,15 @@ export function createSocketServer(httpServer: any) {
         socket.join(code);
         socket.emit('host:roomCreated', { code });
         
-        // Save to database
-        await prisma.match.create({
-          data: {
-            code,
-            hostId: socket.id,
-            status: 'waiting'
-          }
-        });
+        // TODO: Save to database when schema is properly configured
+        // await prisma.match.create({
+        //   data: {
+        //     code,
+        //     status: 'scheduled',
+        //     teamAId: 'temp-team-a',
+        //     teamBId: 'temp-team-b'
+        //   }
+        // });
         
         console.log('Room created:', code);
       } catch (error) {
@@ -90,14 +91,14 @@ export function createSocketServer(httpServer: any) {
           playerCount: room.players.size
         });
         
-        // Save to database
-        await prisma.matchEvent.create({
-          data: {
-            matchId: (await prisma.match.findFirst({ where: { code } }))?.id || 0,
-            type: 'player_join',
-            data: { playerId, playerName, team }
-          }
-        });
+        // TODO: Save to database when schema is properly configured
+        // await prisma.matchEvent.create({
+        //   data: {
+        //     matchId: (await prisma.match.findFirst({ where: { code } }))?.id || 0,
+        //     type: 'player_join',
+        //     payload: { playerId, playerName, team }
+        //   }
+        // });
         
         console.log('Player joined:', playerName, 'to room:', code);
       } catch (error) {
