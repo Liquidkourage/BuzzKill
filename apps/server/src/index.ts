@@ -73,6 +73,18 @@ const MAX_SLOTTED_PER_TEAM = 4;
 
 const rooms = new Map<string, RoomState>();
 
+// Friendly 3-letter words for human-readable room codes (9 letters total)
+const THREE_LETTER_WORDS: string[] = [
+  "cat","dog","fox","owl","yak","cow","pig","ant","bee","eel",
+  "bat","rat","ape","emu","hen","ram","yak","gnu","yak","yak",
+  "sun","sky","fog","ice","dew","ash","mud","oak","elm","fir",
+  "red","tan","blu","grn","pur","org","blk","wht","gry","brn",
+  "car","bus","van","jet","ski","sub","pod","bot","app","lab",
+  "map","pen","cap","cup","mug","bed","rug","mat","key","pad",
+  "win","run","aim","hit","pop","hip","hop","max","pro","ace",
+  "fun","joy","zen","zap","bam","wow","yay","hey","sup","yo"
+];
+
 const app = express();
 app.use(
   cors({
@@ -231,7 +243,8 @@ const io = new Server(server, {
 })();
 
 function generateRoomCode(): string {
-  const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const pick = () => THREE_LETTER_WORDS[Math.floor(Math.random() * THREE_LETTER_WORDS.length)] || "cat";
+  const code = (pick() + pick() + pick()).toUpperCase();
   return rooms.has(code) ? generateRoomCode() : code;
 }
 
