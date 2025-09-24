@@ -74,7 +74,13 @@ const MAX_SLOTTED_PER_TEAM = 4;
 const rooms = new Map<string, RoomState>();
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: ["https://web-production-836fe.up.railway.app", "http://localhost:3000"],
+    methods: ["GET", "POST"],
+    credentials: true,
+  })
+);
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
@@ -195,15 +201,15 @@ app.get("/livekit/token", async (req, res) => {
 });
 
 const server = http.createServer(app);
-const io = new Server(server, { 
-  cors: { 
+const io = new Server(server, {
+  cors: {
     origin: ["https://web-production-836fe.up.railway.app", "http://localhost:3000"],
     methods: ["GET", "POST"],
-    credentials: true
+    credentials: true,
   },
   transports: ["websocket", "polling"],
   allowEIO3: true,
-  path: "/socket.io/"
+  path: "/socket.io",
 });
 
 // If REDIS_URL is set, enable Socket.IO Redis adapter for horizontal scaling
@@ -643,8 +649,8 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 server.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`Server listening on http://localhost:${PORT}`);
-  console.log(`Socket.IO server configured with CORS: *`);
-  console.log(`Available transports: websocket, polling`);
+  console.log(`Socket.IO CORS origins: https://web-production-836fe.up.railway.app, http://localhost:3000`);
+  console.log(`Available transports: websocket, polling (path=/socket.io)`);
 });
 
 
