@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { getSocket } from "@/lib/socket";
 import VideoClient from "@/components/VideoClient";
+import StageLayout from "@/components/StageLayout";
 import BigTimer from "@/components/BigTimer";
 
 export default function HostPage() {
@@ -30,8 +31,25 @@ export default function HostPage() {
   const markCorrectSteal = () => getSocket().emit("host:markCorrectSteal", { code });
   const markIncorrectSteal = () => getSocket().emit("host:markIncorrectSteal", { code });
 
+  const leftPlayers = (() => {
+    const s: any = state || {};
+    const ids: string[] = s?.slots?.A || [];
+    return ids.slice(0, 4).map((pid) => {
+      const p = (s?.players || []).find((pp: any) => pp.id === pid) || {};
+      return { id: pid, name: p.name || pid.slice(0, 6), buzzesRemaining: p.buzzesRemaining ?? 0, latencyMs: s?.latencyMsByPlayer?.[pid] };
+    });
+  })();
+  const rightPlayers = (() => {
+    const s: any = state || {};
+    const ids: string[] = s?.slots?.B || [];
+    return ids.slice(0, 4).map((pid) => {
+      const p = (s?.players || []).find((pp: any) => pp.id === pid) || {};
+      return { id: pid, name: p.name || pid.slice(0, 6), buzzesRemaining: p.buzzesRemaining ?? 0, latencyMs: s?.latencyMsByPlayer?.[pid] };
+    });
+  })();
+
   return (
-    <main className="p-6 max-w-3xl mx-auto flex flex-col gap-4">
+    <main className="p-6 max-w-[1500px] mx-auto flex flex-col gap-4">
       <h1 className="text-2xl font-bold">Host Console</h1>
       <div className="flex gap-2 items-center">
         <button className="px-3 py-2 rounded bg-blue-600 text-white" onClick={createRoom}>Create Room</button>
@@ -73,33 +91,14 @@ export default function HostPage() {
         <button className="btn-secondary" onClick={markCorrectSteal} disabled={!code}>Correct (Steal)</button>
         <button className="btn-secondary" onClick={markIncorrectSteal} disabled={!code}>Incorrect (Steal)</button>
       </div>
-      {/* Slotted players with buzz counts + RTT if available */}
-      {(state as any)?.players && (
-        <div className="grid grid-cols-2 gap-3">
-          {(["A","B"] as const).map((t) => (
-            <div key={t} className="hud-card p-2">
-              <div className="font-semibold mb-1">Team {t}</div>
-              <div className="flex flex-col gap-1">
-                {(state as any).slots?.[t]?.map((pid: string) => {
-                  const p = (state as any).players.find((pp: unknown) => (pp as any).id === pid);
-                  if (!p) return null;
-                  return (
-                    <div key={pid} className="flex items-center justify-between text-sm">
-                      <span>{p.name || pid.slice(0,6)}{typeof (state as any)?.latencyMsByPlayer?.[pid] === 'number' ? ` · ${(state as any).latencyMsByPlayer[pid]}ms` : ''}</span>
-                      <div className="buzz-dots">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <span key={i} className={`dot ${i < (p.buzzesRemaining ?? 0) ? 'on' : ''}`}></span>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
+      {code && (
+        <StageLayout
+          leftPlayers={leftPlayers}
+          rightPlayers={rightPlayers}
+          host={<VideoClient code={code} identity={`host-${code}`} compact />}
+          screen={<div className="w-full h-full flex items-center justify-center text-xl opacity-80">Game Screen</div>}
+        />
       )}
-      {code && <VideoClient code={code} identity={`host-${code}`} />}
       <details className="hud-card p-3 text-xs"><summary className="cursor-pointer opacity-80">Debug state</summary><pre className="overflow-auto">{JSON.stringify(state, null, 2)}</pre></details>
     </main>
   );

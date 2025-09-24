@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Room, RoomEvent, createLocalTracks, RemoteTrack } from "livekit-client";
 
-export default function VideoClient({ code, identity }: { code: string; identity: string }) {
+export default function VideoClient({ code, identity, compact }: { code: string; identity: string; compact?: boolean }) {
   const [room, setRoom] = useState<Room | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +125,17 @@ export default function VideoClient({ code, identity }: { code: string; identity
     };
   }, [code, identity, selectedDeviceId, publishTracksWithRetry]);
 
+  if (compact) {
+    return (
+      <div className="relative w-full h-full bg-black/80">
+        <video ref={setLocalVideoEl} autoPlay muted playsInline className="w-full h-full object-cover" />
+        {remoteVideoTracks.map(({ id, track }) => (
+          <VideoTile key={id} track={track} />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="w-full border rounded p-2">
       <div className="text-sm opacity-80 mb-2">Video: {connected ? "connected" : `connecting... (${connState})`}</div>
@@ -134,81 +145,18 @@ export default function VideoClient({ code, identity }: { code: string; identity
           <div className="text-xs opacity-70 mt-1">Set LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET to enable video</div>
         </div>
       )}
-      {/* Simple local + remote video grid */}
-      <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
-        <div className="relative aspect-video bg-black/80 rounded overflow-hidden">
-          <video ref={setLocalVideoEl} autoPlay muted playsInline className="w-full h-full object-cover" />
-          <div className="absolute bottom-1 left-1 text-xs bg-black/60 text-white px-1 rounded">you</div>
-        </div>
-        {remoteVideoTracks.map(({ id, track }) => (
-          <VideoTile key={id} track={track} />
-        ))}
+      <div className="relative aspect-video bg-black/80 rounded overflow-hidden">
+        <video ref={setLocalVideoEl} autoPlay muted playsInline className="w-full h-full object-cover" />
+        <div className="absolute bottom-1 left-1 text-xs bg-black/60 text-white px-1 rounded">you</div>
       </div>
       {room && (
         <div className="flex items-center gap-2 mt-2">
-          <button
-            className="px-2 py-1 text-sm rounded border"
-            onClick={async () => {
-              if (!room) return;
-              const next = !micOn;
-              try {
-                await room.localParticipant.setMicrophoneEnabled(next);
-                setMicOn(next);
-              } catch (e) {
-                // swallow
-              }
-            }}
-          >
-            {micOn ? "Mute" : "Unmute"}
-          </button>
-          <button
-            className="px-2 py-1 text-sm rounded border"
-            onClick={async () => {
-              if (!room) return;
-              const next = !camOn;
-              try {
-                await room.localParticipant.setCameraEnabled(next);
-                setCamOn(next);
-              } catch (e) {
-                // swallow
-              }
-            }}
-          >
-            {camOn ? "Camera Off" : "Camera On"}
-          </button>
-          <span className="text-xs opacity-70 ml-2">
-            {(() => {
-              const size = (room as any)?.participants?.size ?? (room as any)?.remoteParticipants?.size ?? 0;
-              return `participants: ${1 + (typeof size === "number" ? size : 0)}`;
-            })()}
-          </span>
-          {devices.length > 0 && (
-            <>
-              <select
-                className="ml-2 px-2 py-1 text-sm rounded border bg-black/20"
-                value={selectedDeviceId || ''}
-                onChange={(e) => setSelectedDeviceId(e.target.value || undefined)}
-              >
-                <option value="">Default camera</option>
-                {devices.map((d) => (
-                  <option key={d.deviceId} value={d.deviceId}>{d.label || `Camera ${d.deviceId.slice(-4)}`}</option>
-                ))}
-              </select>
-              <button
-                className="px-2 py-1 text-sm rounded border"
-                onClick={async () => {
-                  if (!room) return;
-                  try {
-                    await room.localParticipant.setCameraEnabled(false);
-                  } catch {}
-                  // republish using selected device
-                  await publishTracksWithRetry(room, true);
-                }}
-              >
-                Switch Camera
-              </button>
-            </>
-          )}
+          <button className="px-2 py-1 text-sm rounded border" onClick={async () => {
+            if (!room) return; const next = !micOn; try { await room.localParticipant.setMicrophoneEnabled(next); setMicOn(next); } catch {}
+          }}>{micOn ? "Mute" : "Unmute"}</button>
+          <button className="px-2 py-1 text-sm rounded border" onClick={async () => {
+            if (!room) return; const next = !camOn; try { await room.localParticipant.setCameraEnabled(next); setCamOn(next); } catch {}
+          }}>{camOn ? "Camera Off" : "Camera On"}</button>
         </div>
       )}
     </div>
