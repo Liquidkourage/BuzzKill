@@ -8,10 +8,12 @@ export function getSocket(): Socket {
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:4000";
     console.log('Connecting to server:', serverUrl);
     socketInstance = io(serverUrl, { 
-      transports: ["websocket"], 
+      transports: ["polling", "websocket"], 
       autoConnect: true,
-      timeout: 5000,
-      forceNew: true
+      timeout: 10000,
+      forceNew: true,
+      upgrade: true,
+      rememberUpgrade: false
     });
     
     socketInstance.on('connect', () => {
