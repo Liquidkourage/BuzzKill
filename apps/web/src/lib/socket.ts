@@ -4,32 +4,23 @@ let socketInstance: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socketInstance) {
-    // For now, create a mock socket that doesn't require a server
-    // This allows the Create Room button to work without Socket.IO server
-    const mockSocket = {
-      on: () => {},
-      off: () => {},
-      emit: (event: string, data?: any, callback?: () => void) => {
-        console.log('Mock socket emit:', event, data);
-        // Simulate successful room creation
-        if (event === 'host:createRoom') {
-          setTimeout(() => {
-            // Simulate the server response
-            const mockResponse = { code: Math.random().toString(36).substring(2, 8).toUpperCase() };
-            console.log('Mock room created:', mockResponse.code);
-            // Trigger the host:created event
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('mock-host-created', { detail: mockResponse }));
-            }
-          }, 100);
-        }
-        if (callback) callback();
-      },
-      connected: true
-    } as any;
+    // Connect to the server service
+    const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:4000";
+    console.log('Connecting to server:', serverUrl);
+    socketInstance = io(serverUrl, { 
+      transports: ["websocket"], 
+      autoConnect: true,
+      timeout: 5000,
+      forceNew: true
+    });
     
-    socketInstance = mockSocket;
-    console.log('Using mock socket - no server required');
+    socketInstance.on('connect', () => {
+      console.log('Socket connected to:', serverUrl);
+    });
+    
+    socketInstance.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
   }
   return socketInstance;
 }
