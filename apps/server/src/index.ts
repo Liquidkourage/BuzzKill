@@ -137,19 +137,24 @@ app.get("/health", async (req, res) => {
   try {
     // Test database connection
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ 
-      status: "healthy", 
+    res.json({
+      status: "healthy",
       timestamp: new Date().toISOString(),
       database: "connected"
     });
   } catch (error) {
-    res.status(500).json({ 
-      status: "unhealthy", 
+    res.status(500).json({
+      status: "unhealthy",
       timestamp: new Date().toISOString(),
       database: "disconnected",
       error: error instanceof Error ? error.message : "Unknown error"
     });
   }
+});
+
+// Test endpoint to verify server is running
+app.get("/test", (req, res) => {
+  res.json({ message: "Server is running!", timestamp: new Date().toISOString() });
 });
 
 app.get("/livekit/token", async (req, res) => {
@@ -192,11 +197,13 @@ app.get("/livekit/token", async (req, res) => {
 const server = http.createServer(app);
 const io = new Server(server, { 
   cors: { 
-    origin: "*",
-    methods: ["GET", "POST"]
+    origin: ["https://web-production-836fe.up.railway.app", "http://localhost:3000"],
+    methods: ["GET", "POST"],
+    credentials: true
   },
   transports: ["websocket", "polling"],
-  allowEIO3: true
+  allowEIO3: true,
+  path: "/socket.io/"
 });
 
 // If REDIS_URL is set, enable Socket.IO Redis adapter for horizontal scaling
