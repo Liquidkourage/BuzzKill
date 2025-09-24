@@ -190,7 +190,14 @@ app.get("/livekit/token", async (req, res) => {
 });
 
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, { 
+  cors: { 
+    origin: "*",
+    methods: ["GET", "POST"]
+  },
+  transports: ["websocket", "polling"],
+  allowEIO3: true
+});
 
 // If REDIS_URL is set, enable Socket.IO Redis adapter for horizontal scaling
 (async () => {
@@ -264,6 +271,8 @@ function publishState(state: RoomState) {
 }
 
 io.on("connection", (socket) => {
+  console.log("Client connected:", socket.id);
+  console.log("Socket transport:", socket.conn.transport.name);
   socket.emit("connected", { socketId: socket.id });
 
   socket.on("disconnect", () => {
@@ -627,6 +636,8 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 server.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`Server listening on http://localhost:${PORT}`);
+  console.log(`Socket.IO server configured with CORS: *`);
+  console.log(`Available transports: websocket, polling`);
 });
 
 
