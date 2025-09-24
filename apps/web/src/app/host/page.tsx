@@ -11,6 +11,8 @@ import BigTimer from "@/components/BigTimer";
 
 export default function HostPage() {
   const [code, setCode] = useState<string>("");
+  const [hostName, setHostName] = useState<string>("");
+  const [hostPronouns, setHostPronouns] = useState<string>("");
   const [state, setState] = useState<unknown>(null);
 
   useEffect(() => {
@@ -41,6 +43,10 @@ export default function HostPage() {
       <div className="flex gap-2 items-center">
         <button className="px-3 py-2 rounded bg-blue-600 text-white" onClick={createRoom}>Create Room</button>
         <span className="opacity-70">Code: {code || "-"}</span>
+      </div>
+      <div className="flex gap-2 items-center flex-wrap">
+        <input className="border px-2 py-1 rounded" placeholder="Host name" value={hostName} onChange={e => setHostName(e.target.value)} />
+        <input className="border px-2 py-1 rounded" placeholder="Pronouns" value={hostPronouns} onChange={e => setHostPronouns(e.target.value)} />
       </div>
       {/* HUD: scores, question, phase */}
       {state && (
@@ -83,6 +89,7 @@ export default function HostPage() {
           code={code}
           identity={`host-${code}`}
           hostIdentity={`host-${code}`}
+          hostLabel={hostName ? `READER: ${hostName}${hostPronouns ? ` (${hostPronouns})` : ''}` : undefined}
           leftIdentities={(state as any)?.slots?.A || []}
           rightIdentities={(state as any)?.slots?.B || []}
           screen={<div className="w-full h-full flex items-center justify-center text-xl opacity-80">Game Screen</div>}

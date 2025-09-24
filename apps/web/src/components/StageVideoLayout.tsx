@@ -11,9 +11,10 @@ interface Props {
   rightIdentities: string[]; // playerIds for team B
   hostIdentity: string; // e.g., host-<code>
   screen?: React.ReactNode;
+  hostLabel?: string;
 }
 
-export default function StageVideoLayout({ code, identity, leftIdentities, rightIdentities, hostIdentity, screen }: Props) {
+export default function StageVideoLayout({ code, identity, leftIdentities, rightIdentities, hostIdentity, screen, hostLabel }: Props) {
   const [, setRoom] = useState<Room | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connState, setConnState] = useState<string>("disconnected");
@@ -111,7 +112,14 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
       ))}
       {/* Host top-middle */}
       <div className="col-[2] row-[1/3] bg-black/80">
-        <div className="relative w-full h-full aspect-video">{renderRemote(hostIdentity)}</div>
+        <div className="relative w-full h-full aspect-video">
+          {renderRemote(hostIdentity)}
+          {hostLabel ? (
+            <div className="absolute bottom-1 left-1 text-xs bg-black/60 text-white px-2 py-0.5 rounded">
+              {hostLabel}
+            </div>
+          ) : null}
+        </div>
       </div>
       {/* Screen bottom-middle */}
       <div className="col-[2] row-[3/5] bg-black/80">
