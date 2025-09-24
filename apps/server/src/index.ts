@@ -203,9 +203,8 @@ app.get("/livekit/token", async (req, res) => {
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ["https://web-production-836fe.up.railway.app", "http://localhost:3000"],
+    origin: "*",
     methods: ["GET", "POST"],
-    credentials: true,
   },
   transports: ["websocket", "polling"],
   allowEIO3: true,
@@ -649,7 +648,8 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 server.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`Server listening on http://localhost:${PORT}`);
-  console.log(`Socket.IO CORS origins: https://web-production-836fe.up.railway.app, http://localhost:3000`);
+  console.log(`PORT env: ${process.env.PORT}`);
+  console.log(`Socket.IO CORS: * (no credentials)`);
   console.log(`Available transports: websocket, polling (path=/socket.io)`);
 });
 
