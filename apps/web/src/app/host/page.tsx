@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { getSocket } from "@/lib/socket";
 import VideoClient from "@/components/VideoClient";
 import StageLayout from "@/components/StageLayout";
+import StageVideoLayout from "@/components/StageVideoLayout";
 import BigTimer from "@/components/BigTimer";
 
 export default function HostPage() {
@@ -92,10 +93,12 @@ export default function HostPage() {
         <button className="btn-secondary" onClick={markIncorrectSteal} disabled={!code}>Incorrect (Steal)</button>
       </div>
       {code && (
-        <StageLayout
-          leftPlayers={leftPlayers}
-          rightPlayers={rightPlayers}
-          host={<VideoClient code={code} identity={`host-${code}`} compact />}
+        <StageVideoLayout
+          code={code}
+          identity={`host-${code}`}
+          hostIdentity={`host-${code}`}
+          leftIdentities={(state as any)?.slots?.A || []}
+          rightIdentities={(state as any)?.slots?.B || []}
           screen={<div className="w-full h-full flex items-center justify-center text-xl opacity-80">Game Screen</div>}
         />
       )}
