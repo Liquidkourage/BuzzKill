@@ -101,7 +101,11 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
     <div className="grid grid-cols-[1fr_2fr_1fr] grid-rows-4 gap-0 w-full max-w-[1400px] mx-auto">
       {/* Left column */}
       {leftIds.map((id, idx) => (
-        <div key={`L${idx}`} className="col-[1] row-[auto] bg-black/70">
+        <div
+          key={`L${idx}`}
+          className="col-[1] bg-black/70"
+          style={{ gridRow: `${idx + 1} / ${idx + 2}` }}
+        >
           <div className="relative aspect-video">{id ? renderRemote(id) : <EmptyCell />}</div>
         </div>
       ))}
@@ -115,7 +119,11 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
       </div>
       {/* Right column */}
       {rightIds.map((id, idx) => (
-        <div key={`R${idx}`} className="col-[3] row-[auto] bg-black/70">
+        <div
+          key={`R${idx}`}
+          className="col-[3] bg-black/70"
+          style={{ gridRow: `${idx + 1} / ${idx + 2}` }}
+        >
           <div className="relative aspect-video">{id ? renderRemote(id) : <EmptyCell />}</div>
         </div>
       ))}
