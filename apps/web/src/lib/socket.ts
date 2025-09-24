@@ -7,8 +7,9 @@ export function getSocket(): Socket {
     // Connect to the server service
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:4000";
     console.log('Connecting to server:', serverUrl);
-    socketInstance = io(serverUrl, { 
-      transports: ["polling"], 
+    socketInstance = io(serverUrl, {
+      path: "/socket.io",
+      transports: ["polling"],
       autoConnect: true,
       timeout: 10000,
       forceNew: true
