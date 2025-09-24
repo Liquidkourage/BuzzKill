@@ -14,10 +14,23 @@ export default function HostPage() {
     const socket = getSocket();
     socket.on("host:created", (p) => setCode(p.code));
     socket.on("room:state", setState);
+    
+    // Listen for mock events
+    const handleMockHostCreated = (event: any) => {
+      setCode(event.detail.code);
+    };
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('mock-host-created', handleMockHostCreated);
+    }
+    
     // Host also receives ping summaries via state.latencyMsByPlayer in debug panel; no need to ping
     return () => {
       socket.off("host:created");
       socket.off("room:state");
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('mock-host-created', handleMockHostCreated);
+      }
     };
   }, []);
 
