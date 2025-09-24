@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default function StageVideoLayout({ code, identity, leftIdentities, rightIdentities, hostIdentity, screen }: Props) {
-  const [room, setRoom] = useState<Room | null>(null);
+  const [, setRoom] = useState<Room | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connState, setConnState] = useState<string>("disconnected");
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -80,7 +80,7 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
       }
     })();
     return () => { mounted = false; if (lkRoom) lkRoom.disconnect(); };
-  }, [code, identity, publishLocal]);
+  }, [code, identity, publishLocal, forceRerender]);
 
   const renderRemote = useCallback((who: string) => {
     // If this identity is self, show local video ref instead

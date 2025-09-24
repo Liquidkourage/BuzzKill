@@ -3,8 +3,9 @@
 
 import { useEffect, useState } from "react";
 import { getSocket } from "@/lib/socket";
-import VideoClient from "@/components/VideoClient";
-import StageLayout from "@/components/StageLayout";
+// VideoClient not used in grid layout; kept available for future
+// import VideoClient from "@/components/VideoClient";
+// import StageLayout from "@/components/StageLayout";
 import StageVideoLayout from "@/components/StageVideoLayout";
 import BigTimer from "@/components/BigTimer";
 
@@ -32,22 +33,7 @@ export default function HostPage() {
   const markCorrectSteal = () => getSocket().emit("host:markCorrectSteal", { code });
   const markIncorrectSteal = () => getSocket().emit("host:markIncorrectSteal", { code });
 
-  const leftPlayers = (() => {
-    const s: any = state || {};
-    const ids: string[] = s?.slots?.A || [];
-    return ids.slice(0, 4).map((pid) => {
-      const p = (s?.players || []).find((pp: any) => pp.id === pid) || {};
-      return { id: pid, name: p.name || pid.slice(0, 6), buzzesRemaining: p.buzzesRemaining ?? 0, latencyMs: s?.latencyMsByPlayer?.[pid] };
-    });
-  })();
-  const rightPlayers = (() => {
-    const s: any = state || {};
-    const ids: string[] = s?.slots?.B || [];
-    return ids.slice(0, 4).map((pid) => {
-      const p = (s?.players || []).find((pp: any) => pp.id === pid) || {};
-      return { id: pid, name: p.name || pid.slice(0, 6), buzzesRemaining: p.buzzesRemaining ?? 0, latencyMs: s?.latencyMsByPlayer?.[pid] };
-    });
-  })();
+  // Player arrays are computed inside StageVideoLayout; no local copies needed
 
   return (
     <main className="p-6 max-w-[1500px] mx-auto flex flex-col gap-4">

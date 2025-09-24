@@ -39,10 +39,10 @@ export default function StageLayout({ leftPlayers, rightPlayers, host, screen }:
     </div>
   );
 
-  const paddedLeft = [...leftPlayers].slice(0, 4);
-  while (paddedLeft.length < 4) paddedLeft.push(null as any);
-  const paddedRight = [...rightPlayers].slice(0, 4);
-  while (paddedRight.length < 4) paddedRight.push(null as any);
+  const paddedLeft: Array<PlayerBoxData | null> = [...leftPlayers].slice(0, 4);
+  while (paddedLeft.length < 4) paddedLeft.push(null);
+  const paddedRight: Array<PlayerBoxData | null> = [...rightPlayers].slice(0, 4);
+  while (paddedRight.length < 4) paddedRight.push(null);
 
   return (
     <div className="grid grid-cols-[1fr_2fr_1fr] grid-rows-4 gap-0 w-full max-w-[1400px] mx-auto">
