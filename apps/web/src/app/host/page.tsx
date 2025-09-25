@@ -110,6 +110,12 @@ export default function HostPage() {
           hostLabel={hostName ? `READER: ${hostName}${hostPronouns ? ` (${hostPronouns})` : ''}` : undefined}
           leftIdentities={(state as any)?.slots?.A || []}
           rightIdentities={(state as any)?.slots?.B || []}
+          playerNames={(() => {
+            const map: Record<string, string> = {};
+            const list = (state as any)?.players || [];
+            for (const p of list) map[(p as any).id] = (p as any).name || (p as any).id.slice(0,6);
+            return map;
+          })()}
           screen={<div className="w-full h-full"><GameScreenProxy state={state as any} /></div>}
         />
       )}

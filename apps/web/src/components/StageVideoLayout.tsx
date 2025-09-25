@@ -13,10 +13,11 @@ interface Props {
   hostIdentity: string; // e.g., host-<code>
   screen?: React.ReactNode;
   hostLabel?: string;
+  playerNames?: Record<string, string>;
 }
 
-export default function StageVideoLayout({ code, identity, leftIdentities, rightIdentities, hostIdentity, screen, hostLabel }: Props) {
-  const [, setRoom] = useState<Room | null>(null);
+export default function StageVideoLayout({ code, identity, leftIdentities, rightIdentities, hostIdentity, screen, hostLabel, playerNames }: Props) {
+  const [room, setRoom] = useState<Room | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connState, setConnState] = useState<string>("disconnected");
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -116,8 +117,9 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
       return <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />;
     }
     const track = identityToTrack.current.get(who);
-    return <VideoRender track={track || null} fallbackLabel={who.slice(0, 6)} />;
-  }, [identity]);
+    const label = playerNames?.[who] || who.slice(0, 6);
+    return <VideoRender track={track || null} fallbackLabel={label} />;
+  }, [identity, playerNames]);
 
   // Build arrays padded to 4
   const leftIds = useMemo(() => [...leftIdentities].slice(0, 4), [leftIdentities]);
@@ -163,8 +165,15 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
         </div>
       ))}
 
-      {/* Status / errors (optional debug) */}
-      {error ? <div className="col-[1/4] row-[1] text-xs text-yellow-500 p-1">Video: {error} ({connState})</div> : null}
+      {/* Local camera/mic controls and status */}
+      {room && (
+        <div className="col-[1/4] row-[1] mt-2 flex items-center gap-2 text-xs">
+          <button className="px-2 py-1 rounded border" onClick={async () => { if (!room) return; try { const enabled = (room.localParticipant as any).isMicrophoneEnabled?.() ?? true; await room.localParticipant.setMicrophoneEnabled(!enabled); } catch {} }}>Toggle Mic</button>
+          <button className="px-2 py-1 rounded border" onClick={async () => { if (!room) return; try { const enabled = (room.localParticipant as any).isCameraEnabled?.() ?? true; await room.localParticipant.setCameraEnabled(!enabled); } catch {} }}>Toggle Camera</button>
+          <span className="opacity-70">Video: {connState}</span>
+          {error ? <span className="text-yellow-600"> · {error}</span> : null}
+        </div>
+      )}
     </div>
   );
 }
