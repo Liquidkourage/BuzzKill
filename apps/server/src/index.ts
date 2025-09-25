@@ -64,6 +64,7 @@ interface RoomState {
   overtime: boolean; // sudden-death after regulation tie
   latencyMsByPlayer: Record<string, number>; // playerId -> RTT
   matchId?: string; // persisted match id
+  screen?: { category?: string; question?: string; answer?: string; revealed?: boolean };
 }
 
 const INITIAL_BUZZES_PER_PLAYER = 5;
@@ -285,6 +286,7 @@ function publishState(state: RoomState) {
     overtime: state.overtime,
     slots: state.slots,
     latencyMsByPlayer: state.latencyMsByPlayer,
+    screen: state.screen,
     players: Object.values(state.players).map((p) => ({
       id: p.id,
       name: p.name,
@@ -326,6 +328,7 @@ io.on("connection", (socket) => {
       phase: { kind: "idle" },
       overtime: false,
       latencyMsByPlayer: {},
+      screen: undefined,
     };
     rooms.set(code, state);
     socket.join(code);
@@ -433,6 +436,34 @@ io.on("connection", (socket) => {
         advanceAfterQuestion(current);
       }
     }, QUESTION_TIME_MS + 10);
+  });
+
+  // Host sets screen content (category/question/answer)
+  socket.on(
+    "host:screenSet",
+    ({ code, category, question, answer }: { code: string; category?: string; question?: string; answer?: string }) => {
+      const state = rooms.get(code);
+      if (!state || state.hostSocketId !== socket.id) return;
+      state.screen = { category, question, answer, revealed: false };
+      publishState(state);
+    }
+  );
+
+  // Host reveals the answer
+  socket.on("host:screenReveal", ({ code }: { code: string }) => {
+    const state = rooms.get(code);
+    if (!state || state.hostSocketId !== socket.id) return;
+    if (!state.screen) return;
+    state.screen.revealed = true;
+    publishState(state);
+  });
+
+  // Host clears the screen
+  socket.on("host:screenClear", ({ code }: { code: string }) => {
+    const state = rooms.get(code);
+    if (!state || state.hostSocketId !== socket.id) return;
+    state.screen = undefined;
+    publishState(state);
   });
 
   // Player attempts to buzz
