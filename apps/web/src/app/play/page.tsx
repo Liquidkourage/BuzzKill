@@ -3,7 +3,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getSocket } from "@/lib/socket";
-import VideoClient from "@/components/VideoClient";
+import StageVideoLayout from "@/components/StageVideoLayout";
+import GameScreen from "@/components/GameScreen";
 import BigTimer from "@/components/BigTimer";
 
 type TeamId = "A" | "B";
@@ -130,7 +131,16 @@ export default function PlayPage() {
         <button className="btn-secondary" onClick={buzz} disabled={!playerId}>Buzz</button>
       </div>
 
-      {playerId && code && <VideoClient code={code} identity={playerId} />}
+      {playerId && code && (
+        <StageVideoLayout
+          code={code}
+          identity={playerId}
+          hostIdentity={`host-${code}`}
+          leftIdentities={(state as any)?.slots?.A || []}
+          rightIdentities={(state as any)?.slots?.B || []}
+          screen={<GameScreen screen={(state as any)?.screen} />}
+        />
+      )}
 
       {eligibleTargets.length > 0 && !(state as any)?.overtime && (
         <div className="flex gap-2 items-center flex-wrap">
