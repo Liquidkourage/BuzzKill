@@ -14,9 +14,9 @@ export default function GameScreen({ screen }: { screen?: { category?: string; q
       ) : (
         <div className="text-2xl font-semibold mb-4 opacity-60">(no question)</div>
       )}
-      <div className={`mt-6 text-xl ${screen.revealed ? "opacity-100" : "opacity-30"}`}>
-        {screen.answer ? screen.answer : "(answer)"}
-      </div>
+      {screen.revealed ? (
+        <div className="mt-6 text-xl">{screen.answer ? screen.answer : "(answer)"}</div>
+      ) : null}
     </div>
   );
 }
