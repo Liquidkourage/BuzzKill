@@ -77,6 +77,18 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
         });
         await lkRoom.connect(data.url, data.token, { rtcConfig: { iceTransportPolicy: "relay" } });
         await publishLocal(lkRoom);
+        // Fallback: scan already-subscribed remote video tracks and map identities
+        try {
+          lkRoom.remoteParticipants.forEach((participant) => {
+            participant.tracks.forEach((pub: any) => {
+              const t = pub?.track as RemoteTrack | undefined;
+              if (t && (t as any).kind === "video" && participant.identity) {
+                identityToTrack.current.set(participant.identity, t);
+              }
+            });
+          });
+          forceRerender();
+        } catch {}
       } catch (e: any) {
         setError(e?.message || "Failed to join LiveKit");
       }
