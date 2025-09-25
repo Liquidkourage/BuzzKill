@@ -112,14 +112,39 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
   }, [code, identity, publishLocal, forceRerender]);
 
   const renderRemote = useCallback((who: string) => {
-    // If this identity is self, show local video ref instead
-    if (who === identity) {
-      return <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />;
+    const isSelf = who === identity;
+    if (isSelf) {
+      return (
+        <div className="relative w-full h-full">
+          <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+          {/* Local controls overlay for the current user */}
+          <div className="absolute top-2 left-2 flex gap-2 text-xs">
+            <button
+              className="px-2 py-1 rounded border bg-black/40 text-white"
+              onClick={async (e) => { e.stopPropagation(); try {
+                const enabled = (room as any)?.localParticipant?.isMicrophoneEnabled?.() ?? true;
+                await (room as any)?.localParticipant?.setMicrophoneEnabled(!enabled);
+              } catch {} }}
+            >
+              Toggle Mic
+            </button>
+            <button
+              className="px-2 py-1 rounded border bg-black/40 text-white"
+              onClick={async (e) => { e.stopPropagation(); try {
+                const enabled = (room as any)?.localParticipant?.isCameraEnabled?.() ?? true;
+                await (room as any)?.localParticipant?.setCameraEnabled(!enabled);
+              } catch {} }}
+            >
+              Toggle Camera
+            </button>
+          </div>
+        </div>
+      );
     }
     const track = identityToTrack.current.get(who);
     const label = playerNames?.[who] || who.slice(0, 6);
     return <VideoRender track={track || null} fallbackLabel={label} />;
-  }, [identity, playerNames]);
+  }, [identity, playerNames, room]);
 
   // Build arrays padded to 4
   const leftIds = useMemo(() => [...leftIdentities].slice(0, 4), [leftIdentities]);
