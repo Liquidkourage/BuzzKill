@@ -79,11 +79,25 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
         await publishLocal(lkRoom);
         // Fallback: scan already-subscribed remote video tracks and map identities
         try {
-          lkRoom.remoteParticipants.forEach((participant) => {
+          // Ensure subscription to remote video publications
+          lkRoom.remoteParticipants.forEach((participant: any) => {
+            participant.tracks?.forEach((pub: any) => {
+              if (pub?.kind === "video" && typeof pub.setSubscribed === "function") {
+                try { pub.setSubscribed(true); } catch {}
+              }
+            });
             participant.tracks.forEach((pub: any) => {
               const t = pub?.track as RemoteTrack | undefined;
               if (t && (t as any).kind === "video" && participant.identity) {
                 identityToTrack.current.set(participant.identity, t);
+              }
+            });
+          });
+          // Also force subscribe when new participants connect
+          lkRoom.on("participantConnected" as any, (p: any) => {
+            p?.tracks?.forEach((pub: any) => {
+              if (pub?.kind === "video" && typeof pub.setSubscribed === "function") {
+                try { pub.setSubscribed(true); } catch {}
               }
             });
           });
@@ -168,7 +182,7 @@ function VideoRender({ track, fallbackLabel }: { track: RemoteTrack | null; fall
     <div className="w-full h-full">
       <video ref={setEl} autoPlay playsInline muted={false} className="w-full h-full object-cover" />
       {!track && (
-        <div className="absolute inset-0 flex items-center justify-center text-sm opacity-70">{fallbackLabel}</div>
+        <div className="absolute inset-0 flex items-center justify-center text-sm opacity-70">Waiting for video…</div>
       )}
     </div>
   );
