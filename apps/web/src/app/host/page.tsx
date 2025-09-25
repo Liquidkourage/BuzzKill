@@ -7,12 +7,16 @@ import { getSocket } from "@/lib/socket";
 // import VideoClient from "@/components/VideoClient";
 // import StageLayout from "@/components/StageLayout";
 import StageVideoLayout from "@/components/StageVideoLayout";
+import GameScreen from "@/components/GameScreen";
 import BigTimer from "@/components/BigTimer";
 
 export default function HostPage() {
   const [code, setCode] = useState<string>("");
   const [hostName, setHostName] = useState<string>("");
   const [hostPronouns, setHostPronouns] = useState<string>("");
+  const [category, setCategory] = useState<string>("");
+  const [question, setQuestion] = useState<string>("");
+  const [answer, setAnswer] = useState<string>("");
   const [state, setState] = useState<unknown>(null);
 
   useEffect(() => {
@@ -28,6 +32,9 @@ export default function HostPage() {
 
   const createRoom = () => getSocket().emit("host:createRoom", {}, () => {});
   const openBuzzers = () => getSocket().emit("host:openBuzzers", { code });
+  const setScreen = () => getSocket().emit("host:screenSet", { code, category, question, answer });
+  const reveal = () => getSocket().emit("host:screenReveal", { code });
+  const clearScreen = () => getSocket().emit("host:screenClear", { code });
 
   // Grading controls
   const markCorrectInitial = () => getSocket().emit("host:markCorrectInitial", { code });
@@ -78,6 +85,17 @@ export default function HostPage() {
       <div className="flex gap-2 items-center">
         <button className="btn-primary" onClick={openBuzzers} disabled={!code}>Open Buzzers</button>
       </div>
+      <div className="hud-card p-3 flex flex-col gap-2">
+        <div className="font-semibold">Game Screen</div>
+        <div className="flex flex-wrap gap-2">
+          <input className="border px-2 py-1 rounded" placeholder="Category" value={category} onChange={e => setCategory(e.target.value)} />
+          <input className="border px-2 py-1 rounded w-80" placeholder="Question" value={question} onChange={e => setQuestion(e.target.value)} />
+          <input className="border px-2 py-1 rounded w-64" placeholder="Answer" value={answer} onChange={e => setAnswer(e.target.value)} />
+          <button className="btn-secondary" onClick={setScreen} disabled={!code}>Set</button>
+          <button className="btn-secondary" onClick={reveal} disabled={!code}>Reveal</button>
+          <button className="btn-secondary" onClick={clearScreen} disabled={!code}>Clear</button>
+        </div>
+      </div>
       <div className="flex gap-2 items-center">
         <button className="btn-secondary" onClick={markCorrectInitial} disabled={!code}>Correct (Initial)</button>
         <button className="btn-secondary" onClick={markIncorrectInitial} disabled={!code}>Incorrect (Initial)</button>
@@ -92,12 +110,16 @@ export default function HostPage() {
           hostLabel={hostName ? `READER: ${hostName}${hostPronouns ? ` (${hostPronouns})` : ''}` : undefined}
           leftIdentities={(state as any)?.slots?.A || []}
           rightIdentities={(state as any)?.slots?.B || []}
-          screen={<div className="w-full h-full flex items-center justify-center text-xl opacity-80">Game Screen</div>}
+          screen={<div className="w-full h-full"><GameScreenProxy state={state as any} /></div>}
         />
       )}
       <details className="hud-card p-3 text-xs"><summary className="cursor-pointer opacity-80">Debug state</summary><pre className="overflow-auto">{JSON.stringify(state, null, 2)}</pre></details>
     </main>
   );
+}
+
+function GameScreenProxy({ state }: { state: any }) {
+  return <GameScreen screen={state?.screen} />;
 }
 
 

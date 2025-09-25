@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import GameScreen from "./GameScreen";
 import { Room, RoomEvent, RemoteTrack, createLocalTracks } from "livekit-client";
 
 interface Props {
@@ -123,7 +124,7 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
       </div>
       {/* Screen bottom-middle */}
       <div className="col-[2] row-[3/5] bg-black/80">
-        <div className="w-full h-full aspect-video flex items-center justify-center text-xl opacity-80">{screen || "Game Screen"}</div>
+        <div className="w-full h-full aspect-video flex items-center justify-center text-xl opacity-80">{screen || <GameScreen />}</div>
       </div>
       {/* Right column */}
       {rightIds.map((id, idx) => (
