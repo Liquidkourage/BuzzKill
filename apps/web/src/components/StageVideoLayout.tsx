@@ -65,16 +65,24 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
         if (!mounted) return;
         setRoom(lkRoom);
         lkRoom.on(RoomEvent.ConnectionStateChanged, (s) => setConnState(s));
+        // When a remote track is subscribed, store it by participant identity
         lkRoom.on(RoomEvent.TrackSubscribed, (track: any, publication: any) => {
           if (!publication?.participant?.identity) return;
           if ((track as RemoteTrack).kind !== "video") return;
           identityToTrack.current.set(publication.participant.identity as string, track as RemoteTrack);
           forceRerender();
         });
+        // Remove mapping when track unsubscribes
         lkRoom.on(RoomEvent.TrackUnsubscribed, (_track: any, publication: any) => {
           if (!publication?.participant?.identity) return;
           identityToTrack.current.delete(publication.participant.identity as string);
           forceRerender();
+        });
+        // Ensure we subscribe to new publications (especially when participants join later)
+        lkRoom.on(RoomEvent.TrackPublished as any, (pub: any) => {
+          if (pub?.kind === "video" && typeof pub.setSubscribed === "function") {
+            try { pub.setSubscribed(true); } catch {}
+          }
         });
         await lkRoom.connect(data.url, data.token, { rtcConfig: { iceTransportPolicy: "relay" } });
         await publishLocal(lkRoom);
@@ -95,7 +103,7 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
             });
           });
           // Also force subscribe when new participants connect
-          lkRoom.on("participantConnected" as any, (p: any) => {
+          lkRoom.on(RoomEvent.ParticipantConnected as any, (p: any) => {
             p?.tracks?.forEach((pub: any) => {
               if (pub?.kind === "video" && typeof pub.setSubscribed === "function") {
                 try { pub.setSubscribed(true); } catch {}
