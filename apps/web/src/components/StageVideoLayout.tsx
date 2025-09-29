@@ -84,7 +84,7 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
             try { pub.setSubscribed(true); } catch {}
           }
         });
-        await lkRoom.connect(data.url, data.token, { rtcConfig: { iceTransportPolicy: "relay" } });
+        await lkRoom.connect(data.url, data.token, { autoSubscribe: true, rtcConfig: { iceTransportPolicy: "relay" } });
         await publishLocal(lkRoom);
         // Fallback: scan already-subscribed remote video tracks and map identities
         try {
