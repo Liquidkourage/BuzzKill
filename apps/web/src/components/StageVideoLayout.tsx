@@ -150,7 +150,11 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
       );
     }
     const track = identityToTrack.current.get(who);
+    const participantPresent = (room as any)?.getParticipantByIdentity?.(who);
     const label = playerNames?.[who] || who.slice(0, 6);
+    if (!track && !participantPresent) {
+      return <EmptyCell />;
+    }
     return <VideoRender track={track || null} fallbackLabel={label} />;
   }, [identity, playerNames, room]);
 
