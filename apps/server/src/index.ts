@@ -87,13 +87,15 @@ const THREE_LETTER_WORDS: string[] = [
 ];
 
 const app = express();
-app.use(
-  cors({
-    origin: ["https://web-production-836fe.up.railway.app", "http://localhost:3000"],
-    methods: ["GET", "POST"],
-    credentials: true,
-  })
-);
+// Set permissive CORS headers early for all routes (including 404s)
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "*");
+  if (req.method === "OPTIONS") return res.sendStatus(200);
+  next();
+});
+app.use(cors({ origin: "*" }));
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
