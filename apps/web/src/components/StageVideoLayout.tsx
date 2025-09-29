@@ -190,15 +190,7 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
         </div>
       ))}
 
-      {/* Local camera/mic controls and status */}
-      {room && (
-        <div className="col-[1/4] row-[1] mt-2 flex items-center gap-2 text-xs">
-          <button className="px-2 py-1 rounded border" onClick={async () => { if (!room) return; try { const enabled = (room.localParticipant as any).isMicrophoneEnabled?.() ?? true; await room.localParticipant.setMicrophoneEnabled(!enabled); } catch {} }}>Toggle Mic</button>
-          <button className="px-2 py-1 rounded border" onClick={async () => { if (!room) return; try { const enabled = (room.localParticipant as any).isCameraEnabled?.() ?? true; await room.localParticipant.setCameraEnabled(!enabled); } catch {} }}>Toggle Camera</button>
-          <span className="opacity-70">Video: {connState}</span>
-          {error ? <span className="text-yellow-600"> · {error}</span> : null}
-        </div>
-      )}
+      {/* Removed global debug/status bar to avoid confusion when alone */}
     </div>
   );
 }
