@@ -214,7 +214,8 @@ function VideoRender({ track, fallbackLabel }: { track: RemoteTrack | null; fall
   }, [el, track]);
   return (
     <div className="w-full h-full">
-      <video ref={setEl} autoPlay playsInline muted={false} className="w-full h-full object-cover" />
+      {/* Mute remote videos to satisfy autoplay policies across browsers */}
+      <video ref={setEl} autoPlay playsInline muted className="w-full h-full object-cover" />
       {!track && (
         <div className="absolute inset-0 flex items-center justify-center text-sm opacity-70">Waiting for video…</div>
       )}
