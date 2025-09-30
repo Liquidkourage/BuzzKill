@@ -149,8 +149,29 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
         </div>
       );
     }
-    const track = identityToTrack.current.get(who);
+    let track = identityToTrack.current.get(who);
     const participantPresent = (room as any)?.getParticipantByIdentity?.(who);
+    if (!track && participantPresent) {
+      try {
+        const pubs = Array.from((participantPresent as any).tracks?.values?.() || []);
+        for (const pub of pubs) {
+          if (pub?.kind === "video") {
+            // Ensure subscribed, then use any available videoTrack
+            if (typeof pub.setSubscribed === "function") {
+              try { pub.setSubscribed(true); } catch {}
+            }
+            if (pub?.videoTrack) {
+              track = pub.videoTrack as RemoteTrack;
+              break;
+            }
+            if (pub?.track && (pub.track as any).kind === "video") {
+              track = pub.track as RemoteTrack;
+              break;
+            }
+          }
+        }
+      } catch {}
+    }
     const label = playerNames?.[who] || who.slice(0, 6);
     if (!track && !participantPresent) {
       return <EmptyCell />;
