@@ -153,19 +153,20 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
     const participantPresent = (room as any)?.getParticipantByIdentity?.(who);
     if (!track && participantPresent) {
       try {
-        const pubs = Array.from((participantPresent as any).tracks?.values?.() || []);
+        const pubs: any[] = Array.from(((participantPresent as any).tracks?.values?.() || []) as any);
         for (const pub of pubs) {
-          if (pub?.kind === "video") {
+          const p: any = pub as any;
+          if (p?.kind === "video") {
             // Ensure subscribed, then use any available videoTrack
-            if (typeof pub.setSubscribed === "function") {
-              try { pub.setSubscribed(true); } catch {}
+            if (typeof p.setSubscribed === "function") {
+              try { p.setSubscribed(true); } catch {}
             }
-            if (pub?.videoTrack) {
-              track = pub.videoTrack as RemoteTrack;
+            if (p?.videoTrack) {
+              track = p.videoTrack as RemoteTrack;
               break;
             }
-            if (pub?.track && (pub.track as any).kind === "video") {
-              track = pub.track as RemoteTrack;
+            if (p?.track && (p.track as any).kind === "video") {
+              track = p.track as RemoteTrack;
               break;
             }
           }
