@@ -70,6 +70,10 @@ export default function OrganizerPage() {
         <h1 className="display text-5xl mt-2 m-0">Organizer</h1>
         <p className="mt-2 text-[color:var(--muted)] m-0">
           {seasonName || "Season"} · mark dues ·{" "}
+          <Link href="/packs" className="underline underline-offset-2">
+            question packs
+          </Link>{" "}
+          ·{" "}
           <Link href="/host" className="underline underline-offset-2">
             run match night
           </Link>

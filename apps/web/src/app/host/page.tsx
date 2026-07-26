@@ -12,6 +12,7 @@ import { serverUrl } from "@/lib/league";
 type PhaseKind = "idle" | "open" | "locked" | "steal_open" | "ended";
 
 type LeagueTeam = { teamId: string; name: string; paymentStatus: string };
+type PackRow = { id: string; name: string; questionCount: number };
 
 const PHASE_LABEL: Record<PhaseKind, string> = {
   idle: "Stand by",
@@ -35,8 +36,10 @@ export default function HostPage() {
   const [status, setStatus] = useState("");
   const [copied, setCopied] = useState(false);
   const [leagueTeams, setLeagueTeams] = useState<LeagueTeam[]>([]);
+  const [readyPacks, setReadyPacks] = useState<PackRow[]>([]);
   const [teamAId, setTeamAId] = useState("");
   const [teamBId, setTeamBId] = useState("");
+  const [packId, setPackId] = useState("");
 
   useEffect(() => {
     try {
@@ -49,6 +52,10 @@ export default function HostPage() {
       .then((r) => r.json())
       .then((data) => setLeagueTeams(data.teams || []))
       .catch(() => setLeagueTeams([]));
+    fetch(`${serverUrl()}/packs`)
+      .then((r) => r.json())
+      .then((data) => setReadyPacks(data.packs || []))
+      .catch(() => setReadyPacks([]));
   }, []);
 
   useEffect(() => {
@@ -96,8 +103,12 @@ export default function HostPage() {
       return;
     }
     setStatus("Opening room…");
-    const payload =
-      teamAId && teamBId ? { teamAId, teamBId } : {};
+    const payload: { teamAId?: string; teamBId?: string; packId?: string } = {};
+    if (teamAId && teamBId) {
+      payload.teamAId = teamAId;
+      payload.teamBId = teamBId;
+    }
+    if (packId) payload.packId = packId;
     getSocket().emit("host:createRoom", payload, (resp: any) => {
       if (resp?.ok === false) setStatus(resp?.reason || "Could not create room");
       else setStatus(teamAId && teamBId ? "League match ready — share the room code" : "Scratch room ready");
@@ -138,6 +149,31 @@ export default function HostPage() {
     setStatus("Answer revealed");
   };
   const clearScreen = () => getSocket().emit("host:screenClear", { code });
+  const packStep = (direction: "next" | "prev") => {
+    getSocket().emit("host:packNext", { code, direction }, (resp: any) => {
+      if (resp?.ok === false) setStatus(resp?.reason || "Pack step failed");
+      else {
+        setStatus(direction === "prev" ? "Previous pack question" : "Pack question on board");
+        // Mirror into local fields for manual edit/override
+        // room:state will refresh screen; also pull from state after tick
+      }
+    });
+  };
+  const attachPack = () => {
+    if (!packId) return;
+    getSocket().emit("host:attachPack", { code, packId }, (resp: any) => {
+      if (resp?.ok === false) setStatus(resp?.reason || "Could not attach pack");
+      else setStatus(`Pack loaded: ${resp.packName}`);
+    });
+  };
+
+  useEffect(() => {
+    const screen = state?.screen;
+    if (!screen?.question) return;
+    setCategory(screen.category || "");
+    setQuestion(screen.question || "");
+    setAnswer(screen.answer || "");
+  }, [state?.packCursor, state?.screen?.question]);
 
   if (!code) {
     return (
@@ -189,6 +225,29 @@ export default function HostPage() {
           </p>
         )}
 
+        <div className="flex flex-col gap-2">
+          <label className="mono text-[0.65rem] tracking-[0.14em] uppercase text-[color:var(--stage-muted)]">
+            Question pack
+          </label>
+          <select className="field" value={packId} onChange={(e) => setPackId(e.target.value)}>
+            <option value="">None — type questions live</option>
+            {readyPacks.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.questionCount} Q)
+              </option>
+            ))}
+          </select>
+          {readyPacks.length === 0 ? (
+            <p className="m-0 text-xs text-[color:var(--stage-muted)]">
+              No ready packs — build one under{" "}
+              <Link href="/packs" className="underline underline-offset-2">
+                Question packs
+              </Link>
+              .
+            </p>
+          ) : null}
+        </div>
+
         <button className="btn btn-buzz text-lg py-3" onClick={createRoom}>
           {teamAId && teamBId ? "Start league match" : "Open room"}
         </button>
@@ -210,9 +269,14 @@ export default function HostPage() {
             Reclaim host
           </button>
         </div>
-        <Link href="/organizer" className="text-sm text-[color:var(--stage-muted)] underline underline-offset-2">
-          Organizer desk (dues)
-        </Link>
+        <div className="flex flex-wrap gap-4 text-sm text-[color:var(--stage-muted)]">
+          <Link href="/packs" className="underline underline-offset-2">
+            Question packs
+          </Link>
+          <Link href="/organizer" className="underline underline-offset-2">
+            Organizer desk
+          </Link>
+        </div>
         {status ? <p className="text-sm text-[color:var(--live)]">{status}</p> : null}
       </main>
     );
@@ -327,6 +391,39 @@ export default function HostPage() {
 
       <section className="flex flex-col gap-3">
         <h2 className="display text-2xl m-0">Board</h2>
+        {state?.packName || readyPacks.length > 0 ? (
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="mono text-xs tracking-[0.12em] uppercase text-[color:var(--stage-muted)]">
+              {state?.packName
+                ? `${state.packName} · Q ${Math.max(0, Number(state.packCursor ?? -1) + 1)}/${state.packTotal || 0}`
+                : "No pack on this room"}
+            </span>
+            {state?.packId ? (
+              <>
+                <button className="btn btn-buzz" onClick={() => packStep("next")}>
+                  Next from pack
+                </button>
+                <button className="btn btn-ghost" onClick={() => packStep("prev")}>
+                  Prev
+                </button>
+              </>
+            ) : (
+              <>
+                <select className="field" value={packId} onChange={(e) => setPackId(e.target.value)}>
+                  <option value="">Select ready pack</option>
+                  {readyPacks.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.questionCount})
+                    </option>
+                  ))}
+                </select>
+                <button className="btn btn-ink" onClick={attachPack} disabled={!packId}>
+                  Attach pack
+                </button>
+              </>
+            )}
+          </div>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           <input
             className="field"

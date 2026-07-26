@@ -119,6 +119,11 @@ select {
 }
 
 /* ——— Controls ——— */
+textarea.field {
+  resize: vertical;
+  font: inherit;
+}
+
 .field {
   border: 1px solid var(--line-strong);
   background: rgba(255, 255, 255, 0.7);

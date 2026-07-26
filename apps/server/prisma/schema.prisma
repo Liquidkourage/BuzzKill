@@ -92,12 +92,15 @@ model Match {
   overtime     Boolean      @default(false)
   seasonId     String?
   season       Season?      @relation(fields: [seasonId], references: [id])
+  packId       String?
+  pack         GamePack?    @relation(fields: [packId], references: [id])
   teamAId      String
   teamBId      String
   teamA        Team         @relation("homeMatches", fields: [teamAId], references: [id])
   teamB        Team         @relation("awayMatches", fields: [teamBId], references: [id])
   events       MatchEvent[]
-  questions    Question[]
+
+  @@index([packId])
 }
 
 model MatchEvent {
@@ -109,14 +112,31 @@ model MatchEvent {
   match     Match    @relation(fields: [matchId], references: [id])
 }
 
+/// Named set of questions for a match night (or theme night).
+model GamePack {
+  id          String     @id @default(cuid())
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  name        String
+  slug        String     @unique
+  description String?
+  status      String     @default("draft") // draft | ready | archived
+  questions   Question[]
+  matches     Match[]
+}
+
 model Question {
   id         String   @id @default(cuid())
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  packId     String
+  pack       GamePack @relation(fields: [packId], references: [id], onDelete: Cascade)
+  sortOrder  Int      @default(0)
   prompt     String
   answer     String
   category   String?
   difficulty String?
-  matchId    String?
-  match      Match?   @relation(fields: [matchId], references: [id])
+  notes      String?
+
+  @@index([packId, sortOrder])
 }

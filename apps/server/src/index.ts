@@ -33,6 +33,18 @@ import {
   registerTeam,
   setPaymentStatus,
 } from "./league";
+import {
+  addQuestion,
+  createPack,
+  deletePack,
+  deleteQuestion,
+  getPack,
+  importQuestions,
+  listPacks,
+  packForRoom,
+  updatePack,
+  updateQuestion,
+} from "./packs";
 
 type TeamId = "A" | "B";
 
@@ -69,6 +81,12 @@ interface RoomState {
   teamAId?: string;
   teamBId?: string;
   teamNames?: { A: string; B: string };
+  packId?: string;
+  packName?: string;
+  /** Queue loaded from a GamePack; host advances with packNext. */
+  packQuestions?: { id: string; prompt: string; answer: string; category?: string }[];
+  /** Index of the next question to load from packQuestions. */
+  packCursor?: number;
   screen?: { category?: string; question?: string; answer?: string; revealed?: boolean };
 }
 
@@ -95,7 +113,7 @@ const app = express();
 // Set permissive CORS headers early for all routes (including 404s)
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "*");
   if (req.method === "OPTIONS") return res.sendStatus(200);
   next();
@@ -202,6 +220,120 @@ app.post("/league/registrations/:id/payment", async (req, res) => {
     res.json({ ok: true, registration: row });
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "update failed" });
+  }
+});
+
+// ——— Game packs / question bank ———
+app.get("/packs", async (req, res) => {
+  try {
+    const includeDrafts = organizerAuthorized(req);
+    res.json({ packs: await listPacks({ includeDrafts }) });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "failed to list packs" });
+  }
+});
+
+app.get("/packs/:id", async (req, res) => {
+  try {
+    const pack = await getPack(req.params.id);
+    if (!pack) return res.status(404).json({ error: "Pack not found" });
+    if (pack.status !== "ready" && !organizerAuthorized(req)) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    res.json({ pack });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "failed to load pack" });
+  }
+});
+
+app.post("/packs", async (req, res) => {
+  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const pack = await createPack({
+      name: String(req.body?.name || ""),
+      description: req.body?.description ? String(req.body.description) : undefined,
+      status: req.body?.status ? String(req.body.status) : undefined,
+    });
+    res.status(201).json({ ok: true, pack });
+  } catch (err: any) {
+    res.status(err?.status || 500).json({ error: err?.message || "create failed" });
+  }
+});
+
+app.patch("/packs/:id", async (req, res) => {
+  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const pack = await updatePack(req.params.id, {
+      name: req.body?.name !== undefined ? String(req.body.name) : undefined,
+      description: req.body?.description !== undefined ? String(req.body.description ?? "") : undefined,
+      status: req.body?.status !== undefined ? String(req.body.status) : undefined,
+    });
+    res.json({ ok: true, pack });
+  } catch (err: any) {
+    res.status(err?.status || 500).json({ error: err?.message || "update failed" });
+  }
+});
+
+app.delete("/packs/:id", async (req, res) => {
+  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    await deletePack(req.params.id);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "delete failed" });
+  }
+});
+
+app.post("/packs/:id/questions", async (req, res) => {
+  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const q = await addQuestion(req.params.id, {
+      prompt: String(req.body?.prompt || ""),
+      answer: String(req.body?.answer || ""),
+      category: req.body?.category ? String(req.body.category) : undefined,
+      difficulty: req.body?.difficulty ? String(req.body.difficulty) : undefined,
+      notes: req.body?.notes ? String(req.body.notes) : undefined,
+    });
+    res.status(201).json({ ok: true, question: q });
+  } catch (err: any) {
+    res.status(err?.status || 500).json({ error: err?.message || "add failed" });
+  }
+});
+
+app.post("/packs/:id/import", async (req, res) => {
+  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const result = await importQuestions(req.params.id, String(req.body?.text || ""));
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(err?.status || 500).json({ error: err?.message || "import failed" });
+  }
+});
+
+app.patch("/questions/:id", async (req, res) => {
+  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const q = await updateQuestion(req.params.id, {
+      prompt: req.body?.prompt !== undefined ? String(req.body.prompt) : undefined,
+      answer: req.body?.answer !== undefined ? String(req.body.answer) : undefined,
+      category: req.body?.category !== undefined ? String(req.body.category ?? "") : undefined,
+      difficulty: req.body?.difficulty !== undefined ? String(req.body.difficulty ?? "") : undefined,
+      notes: req.body?.notes !== undefined ? String(req.body.notes ?? "") : undefined,
+      sortOrder: req.body?.sortOrder !== undefined ? Number(req.body.sortOrder) : undefined,
+    });
+    res.json({ ok: true, question: q });
+  } catch (err: any) {
+    res.status(err?.status || 500).json({ error: err?.message || "update failed" });
+  }
+});
+
+app.delete("/questions/:id", async (req, res) => {
+  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    await deleteQuestion(req.params.id);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "delete failed" });
   }
 });
 
@@ -391,6 +523,10 @@ function publishState(state: RoomState) {
     screen: state.screen,
     teamNames: state.teamNames,
     seasonId: state.seasonId,
+    packId: state.packId,
+    packName: state.packName,
+    packCursor: state.packCursor,
+    packTotal: state.packQuestions?.length ?? 0,
     players: Object.values(state.players).map((p) => ({
       id: p.id,
       name: p.name,
@@ -439,11 +575,11 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Host creates a room (optionally bind two league teams for standings)
+  // Host creates a room (optionally bind two league teams + a question pack)
   socket.on(
     "host:createRoom",
     async (
-      payload: { teamAId?: string; teamBId?: string } | undefined,
+      payload: { teamAId?: string; teamBId?: string; packId?: string } | undefined,
       ack?: (payload: { code: string; ok?: boolean; reason?: string }) => void
     ) => {
       const code = generateRoomCode();
@@ -451,6 +587,10 @@ io.on("connection", (socket) => {
       let teamAId: string | undefined;
       let teamBId: string | undefined;
       let teamNames = { A: "Team A", B: "Team B" };
+      let packId: string | undefined;
+      let packName: string | undefined;
+      let packQuestions: RoomState["packQuestions"];
+      let maxQuestions = 20;
 
       try {
         const season = await ensureActiveSeason();
@@ -474,6 +614,22 @@ io.on("connection", (socket) => {
           teamBId = regB.teamId;
           teamNames = { A: regA.team.name, B: regB.team.name };
         }
+        if (payload?.packId) {
+          const pack = await getPack(payload.packId);
+          if (!pack || pack.status !== "ready") {
+            ack?.({ code: "", ok: false, reason: "Pick a ready question pack" });
+            return;
+          }
+          if (pack.questions.length === 0) {
+            ack?.({ code: "", ok: false, reason: "That pack has no questions yet" });
+            return;
+          }
+          const loaded = packForRoom(pack);
+          packId = loaded.packId;
+          packName = loaded.packName;
+          packQuestions = loaded.questions;
+          maxQuestions = loaded.maxQuestions;
+        }
       } catch (err) {
         logDbError("host:createRoom season", err);
       }
@@ -486,7 +642,7 @@ io.on("connection", (socket) => {
         slots: { A: [], B: [] },
         scores: { A: 0, B: 0 },
         questionIndex: 0,
-        maxQuestions: 20,
+        maxQuestions,
         phase: { kind: "idle" },
         overtime: false,
         latencyMsByPlayer: {},
@@ -495,11 +651,15 @@ io.on("connection", (socket) => {
         teamAId,
         teamBId,
         teamNames,
+        packId,
+        packName,
+        packQuestions,
+        packCursor: packQuestions ? -1 : undefined,
       };
       rooms.set(code, state);
       socket.join(code);
       ack?.({ code, ok: true });
-      socket.emit("host:created", { code, teamNames });
+      socket.emit("host:created", { code, teamNames, packName });
       publishState(state);
 
       const createData =
@@ -508,13 +668,17 @@ io.on("connection", (socket) => {
               code,
               status: "live",
               seasonId,
+              packId,
               teamAId,
               teamBId,
+              maxQuestions,
             }
           : {
               code,
               status: "live",
               seasonId,
+              packId,
+              maxQuestions,
               teamA: { create: { name: `Team A ${code}` } },
               teamB: { create: { name: `Team B ${code}` } },
             };
@@ -672,6 +836,87 @@ io.on("connection", (socket) => {
       if (!state || state.hostSocketId !== socket.id) return;
       state.screen = { category, question, answer, revealed: false };
       publishState(state);
+    }
+  );
+
+  // Attach or swap a ready pack mid-match
+  socket.on(
+    "host:attachPack",
+    async (
+      { code, packId }: { code: string; packId: string },
+      ack?: (payload: { ok: boolean; reason?: string; packName?: string }) => void
+    ) => {
+      const state = getRoom(code);
+      if (!state || state.hostSocketId !== socket.id) {
+        ack?.({ ok: false, reason: "Not host" });
+        return;
+      }
+      try {
+        const pack = await getPack(packId);
+        if (!pack || pack.status !== "ready" || pack.questions.length === 0) {
+          ack?.({ ok: false, reason: "Pack not ready or empty" });
+          return;
+        }
+        const loaded = packForRoom(pack);
+        state.packId = loaded.packId;
+        state.packName = loaded.packName;
+        state.packQuestions = loaded.questions;
+        state.packCursor = -1;
+        state.maxQuestions = loaded.maxQuestions;
+        if (state.matchId) {
+          await prisma.match.update({
+            where: { id: state.matchId },
+            data: { packId: loaded.packId, maxQuestions: loaded.maxQuestions },
+          });
+        }
+        publishState(state);
+        ack?.({ ok: true, packName: loaded.packName });
+      } catch (err) {
+        logDbError("host:attachPack", err);
+        ack?.({ ok: false, reason: "Could not load pack" });
+      }
+    }
+  );
+
+  // Load next (or previous) pack question onto the board.
+  // packCursor = index of the currently displayed pack question (-1 before first load).
+  socket.on(
+    "host:packNext",
+    (
+      { code, direction }: { code: string; direction?: "next" | "prev" },
+      ack?: (payload: { ok: boolean; reason?: string }) => void
+    ) => {
+      const state = getRoom(code);
+      if (!state || state.hostSocketId !== socket.id) {
+        ack?.({ ok: false, reason: "Not host" });
+        return;
+      }
+      const list = state.packQuestions;
+      if (!list?.length) {
+        ack?.({ ok: false, reason: "No pack loaded" });
+        return;
+      }
+      const current = state.packCursor ?? -1;
+      const idx =
+        direction === "prev" ? Math.max(0, current - 1) : Math.min(list.length - 1, current + 1);
+      if (direction !== "prev" && current >= list.length - 1 && state.screen?.question) {
+        ack?.({ ok: false, reason: "End of pack" });
+        return;
+      }
+      const q = list[idx];
+      if (!q) {
+        ack?.({ ok: false, reason: "No question" });
+        return;
+      }
+      state.packCursor = idx;
+      state.screen = {
+        category: q.category,
+        question: q.prompt,
+        answer: q.answer,
+        revealed: false,
+      };
+      publishState(state);
+      ack?.({ ok: true });
     }
   );
 
