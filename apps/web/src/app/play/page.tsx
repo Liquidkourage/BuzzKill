@@ -14,11 +14,11 @@ type PhaseKind = "idle" | "open" | "locked" | "steal_open" | "ended";
 const STORAGE_KEY = "buzzkill.player.session";
 
 const PHASE_HINT: Record<PhaseKind, string> = {
-  idle: "Hold for the host",
-  open: "Hit the pad",
-  locked: "Board is locked",
-  steal_open: "Steal window",
-  ended: "Match over",
+  idle: "WAIT FOR HOST",
+  open: "HIT IT",
+  locked: "LOCKED",
+  steal_open: "STEAL WINDOW",
+  ended: "GAME OVER",
 };
 
 export default function PlayPage() {
@@ -53,41 +53,41 @@ export default function PlayPage() {
     socket.on("kill:promptTargets", (p: { eligible: string[]; playerId?: string }) => {
       if (p.playerId && playerId && p.playerId !== playerId) return;
       setEligibleTargets(p.eligible || []);
-      setBanner("Pick who to BuzzKill");
+      setBanner("PICK A TARGET");
     });
     socket.on("kill:applied", () => {
       setEligibleTargets([]);
-      setBanner("BuzzKill landed");
+      setBanner("BUZZKILL LANDED");
     });
     socket.on("question:opened", (p: { deadlineAt: number }) => {
-      setTimerLabel("Buzz");
+      setTimerLabel("BUZZ");
       setDeadlineAt(p.deadlineAt);
-      setBanner("Buzzers live");
+      setBanner("BUZZERS LIVE");
       setEligibleTargets([]);
     });
     socket.on("steal:opened", (p: { team: TeamId; deadlineAt: number }) => {
-      setTimerLabel("Steal");
+      setTimerLabel("STEAL");
       setDeadlineAt(p.deadlineAt);
-      setBanner(`Steal · Team ${p.team}`);
+      setBanner(`STEAL · TEAM ${p.team}`);
     });
     socket.on("question:timeout", () => {
       setDeadlineAt(null);
-      setBanner("Time");
+      setBanner("TIME");
     });
     socket.on("steal:timeout", () => {
       setDeadlineAt(null);
-      setBanner("Steal expired");
+      setBanner("STEAL OVER");
     });
     socket.on("lockout:winner", (p: { playerId: string; name: string }) => {
       setDeadlineAt(null);
-      setBanner(p.playerId === playerId ? "You locked it" : `${p.name} locked`);
+      setBanner(p.playerId === playerId ? "YOU LOCKED IT" : `${p.name} LOCKED`);
     });
     socket.on("steal:lockout", (p: { playerId: string; name: string }) => {
       setDeadlineAt(null);
-      setBanner(p.playerId === playerId ? "You stole it" : `${p.name} stole`);
+      setBanner(p.playerId === playerId ? "YOU STOLE IT" : `${p.name} STOLE`);
     });
-    socket.on("match:end", () => setBanner("Final"));
-    socket.on("match:overtime", () => setBanner("Sudden death"));
+    socket.on("match:end", () => setBanner("FINAL"));
+    socket.on("match:overtime", () => setBanner("SUDDEN DEATH"));
     return () => {
       socket.off("room:state");
       socket.off("kill:promptTargets");
@@ -152,7 +152,7 @@ export default function PlayPage() {
     setJoinError("");
     const room = code.trim().toUpperCase();
     if (!room || !name.trim()) {
-      setJoinError("Need a room code and your name");
+      setJoinError("NEED ROOM CODE + NAME");
       return;
     }
     getSocket().emit(
@@ -163,9 +163,9 @@ export default function PlayPage() {
           setCode(room);
           setPlayerId(resp.playerId);
           persist({ code: room, name: name.trim(), team, playerId: resp.playerId });
-          setBanner(resp.rejoined ? "Back in" : "You're seated");
+          setBanner(resp.rejoined ? "BACK IN" : "SEATED");
         } else {
-          setJoinError(resp?.reason || "Join failed");
+          setJoinError(resp?.reason || "JOIN FAILED");
         }
       }
     );
@@ -173,186 +173,234 @@ export default function PlayPage() {
 
   if (!playerId) {
     return (
-      <main className="shell-light px-5 py-10 max-w-md mx-auto flex flex-col gap-8">
-        <div>
-          <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--muted)]">
-            BuzzKill
-          </Link>
-          <h1 className="display text-6xl mt-3">Join</h1>
-          <p className="mt-3 text-[color:var(--muted)] text-lg">Enter the code your host just shouted.</p>
-        </div>
-        <div className="flex flex-col gap-3">
-          <input
-            className="field mono tracking-[0.22em] uppercase text-lg"
-            placeholder="ROOM CODE"
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-          />
-          <input
-            className="field"
-            placeholder="Your name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              className={`btn ${team === "A" ? "btn-ink" : "btn-ghost"}`}
-              onClick={() => setTeam("A")}
+      <main className="shell-sudden">
+        <div className="sd-hazard" aria-hidden />
+        <div className="sd-wrap gap-6" style={{ gap: "1.5rem", paddingTop: "2rem" }}>
+          <div>
+            <div className="sd-kicker">
+              <Link href="/">BUZZKILL</Link>
+            </div>
+            <h1
+              className="m-0 mt-3"
+              style={{
+                fontFamily: "var(--font-punch), sans-serif",
+                fontSize: "clamp(3rem, 16vw, 4.5rem)",
+                letterSpacing: "-0.03em",
+                textTransform: "uppercase",
+                color: "var(--sd-yellow)",
+              }}
             >
-              Team A
-            </button>
-            <button
-              type="button"
-              className={`btn ${team === "B" ? "btn-ink" : "btn-ghost"}`}
-              onClick={() => setTeam("B")}
-            >
-              Team B
+              Join
+            </h1>
+            <p className="sd-meta mt-3 m-0">ENTER THE CODE. PICK A SIDE. TRY NOT TO CHOKE.</p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <input
+              className="field mono tracking-[0.22em] uppercase text-lg"
+              placeholder="ROOM CODE"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+            />
+            <input
+              className="field"
+              placeholder="YOUR NAME"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                className={`btn ${team === "A" ? "btn-ink" : "btn-ghost"}`}
+                onClick={() => setTeam("A")}
+              >
+                TEAM A
+              </button>
+              <button
+                type="button"
+                className={`btn ${team === "B" ? "btn-ink" : "btn-ghost"}`}
+                onClick={() => setTeam("B")}
+              >
+                TEAM B
+              </button>
+            </div>
+            {joinError ? (
+              <p className="m-0 sd-meta" style={{ color: "var(--sd-red)" }}>
+                {joinError}
+              </p>
+            ) : null}
+            <button className="btn btn-buzz text-lg py-4" onClick={join}>
+              INSERT COIN
             </button>
           </div>
-          {joinError ? <p className="m-0 text-sm text-[color:var(--buzz)]">{joinError}</p> : null}
-          <button className="btn btn-buzz text-lg py-3" onClick={join}>
-            Enter arena
-          </button>
         </div>
       </main>
     );
   }
 
+  const screen = state?.screen;
+  const live = phase === "open" || phase === "steal_open";
+
   return (
-    <main className="shell-stage px-4 sm:px-6 py-5 max-w-[1500px] mx-auto flex flex-col gap-5">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--stage-muted)]">
-            BuzzKill
-          </Link>
-          <h1 className="display text-4xl mt-1">
-            {me?.name || name}
-          </h1>
-          <p className="m-0 mt-1 text-sm text-[color:var(--stage-muted)]">
-            <span className={me?.team === "B" ? "team-b" : "team-a"}>Team {me?.team || team}</span>
-            <span className="mx-2 opacity-40">·</span>
-            <span className="mono tracking-[0.14em]">{code}</span>
-            {me ? (
-              <>
-                <span className="mx-2 opacity-40">·</span>
-                {me.buzzesRemaining} buzzes
-              </>
-            ) : null}
-            {me && !me.slotted ? " · sideline" : null}
-          </p>
-        </div>
-        <BigTimer
-          deadlineAt={deadlineAt}
-          label={timerLabel}
-          totalMs={timerLabel === "Steal" ? 10000 : 15000}
-        />
-      </header>
-
-      {state && (
-        <div className="board">
+    <main className="shell-sudden">
+      <div className="sd-hazard" aria-hidden />
+      <div className="sd-wrap">
+        <header className="sd-top">
           <div>
-            <div className="mono text-xs tracking-[0.16em] uppercase team-a">
-              {state?.teamNames?.A || "A"}
+            <div className="sd-kicker">
+              <Link href="/">BUZZKILL</Link>
+              <span style={{ opacity: 0.45 }}> · </span>
+              SUDDEN DEATH
             </div>
-            <div className="score team-a">{state?.scores?.A ?? 0}</div>
+            <div
+              style={{
+                fontFamily: "var(--font-punch), sans-serif",
+                fontSize: "1.75rem",
+                textTransform: "uppercase",
+                marginTop: "0.35rem",
+                color: "var(--sd-yellow)",
+              }}
+            >
+              {me?.name || name}
+            </div>
+            <p className="sd-meta m-0 mt-1">
+              TEAM {me?.team || team}
+              <span style={{ opacity: 0.4 }}> · </span>
+              {code}
+              {me ? (
+                <>
+                  <span style={{ opacity: 0.4 }}> · </span>
+                  {me.buzzesRemaining} LEFT
+                </>
+              ) : null}
+              {me && !me.slotted ? " · SIDELINE" : null}
+              {state?.overtime ? " · OT" : null}
+            </p>
           </div>
-          <div className="text-center">
-            <div className="phase-tag" data-live={phase === "open" || phase === "steal_open" ? "true" : "false"}>
-              {banner || PHASE_HINT[phase]}
-            </div>
-            <div className="mono text-xs mt-2 text-[color:var(--stage-muted)]">
-              Q {Number(state?.questionIndex ?? 0) + 1}/{state?.maxQuestions ?? 20}
-              {state?.overtime ? " · OT" : ""}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="mono text-xs tracking-[0.16em] uppercase team-b">
-              {state?.teamNames?.B || "B"}
-            </div>
-            <div className="score team-b">{state?.scores?.B ?? 0}</div>
-          </div>
-        </div>
-      )}
+          <BigTimer
+            deadlineAt={deadlineAt}
+            label={timerLabel}
+            totalMs={timerLabel === "STEAL" ? 10000 : 15000}
+          />
+        </header>
 
-      <div className="flex flex-col items-center gap-3 py-2">
-        <button
-          className="buzz-pad"
-          data-ready={canBuzz ? "true" : "false"}
-          onClick={() => canBuzz && getSocket().emit("player:buzz", { code })}
-          disabled={!canBuzz}
-        >
-          BUZZ
-        </button>
-        {!canBuzz ? (
-          <p className="m-0 text-xs tracking-[0.14em] uppercase text-[color:var(--stage-muted)]">
-            {PHASE_HINT[phase]}
-          </p>
+        {state ? (
+          <div className="sd-scores">
+            <div>
+              <div className="sd-score-label">{state?.teamNames?.A || "P1"}</div>
+              <div className="sd-score" data-side="a">
+                {String(state?.scores?.A ?? 0).padStart(2, "0")}
+              </div>
+            </div>
+            <div className="sd-phase" data-live={live ? "true" : "false"}>
+              <div>{banner || PHASE_HINT[phase]}</div>
+              <div className="mt-2" style={{ color: "var(--sd-mute)" }}>
+                Q {Number(state?.questionIndex ?? 0) + 1}/{state?.maxQuestions ?? 20}
+              </div>
+            </div>
+            <div>
+              <div className="sd-score-label" style={{ textAlign: "right" }}>
+                {state?.teamNames?.B || "P2"}
+              </div>
+              <div className="sd-score" data-side="b">
+                {String(state?.scores?.B ?? 0).padStart(2, "0")}
+              </div>
+            </div>
+          </div>
         ) : null}
-      </div>
 
-      {eligibleTargets.length > 0 && !state?.overtime && (
-        <div className="flex flex-col gap-3 border-y border-[color:var(--buzz)] py-4">
-          <div className="display text-2xl text-[color:var(--buzz)]">BuzzKill</div>
-          <div className="flex flex-wrap gap-2">
-            {eligibleTargets.map((pid) => (
-              <button
-                key={pid}
-                className="btn btn-buzz"
-                onClick={() => {
-                  getSocket().emit("player:assignKillTarget", { code, targetId: pid });
-                  setEligibleTargets([]);
-                }}
-              >
-                {playerNameById.get(pid) ?? pid.slice(0, 6)}
-              </button>
+        <section className="sd-frame" aria-live="polite">
+          {screen?.category ? <div className="sd-cat">{screen.category}</div> : null}
+          {screen?.question ? (
+            <p className="sd-q">{screen.question}</p>
+          ) : (
+            <p className="sd-q-idle m-0">AWAITING QUESTION</p>
+          )}
+          {screen?.revealed ? <div className="sd-answer">{screen.answer || "—"}</div> : null}
+        </section>
+
+        <div className="flex flex-col gap-2">
+          <button
+            className="sd-buzz"
+            data-ready={canBuzz ? "true" : "false"}
+            onClick={() => canBuzz && getSocket().emit("player:buzz", { code })}
+            disabled={!canBuzz}
+          >
+            BUZZ
+          </button>
+          {!canBuzz ? <p className="sd-hint">{PHASE_HINT[phase]}</p> : null}
+          {me ? (
+            <div className="sd-dots" aria-label={`${me.buzzesRemaining} buzzes remaining`}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <span key={i} className={i < (me.buzzesRemaining ?? 0) ? "on" : ""} />
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        {eligibleTargets.length > 0 && !state?.overtime ? (
+          <div className="sd-kill">
+            <div className="sd-kill-title">BuzzKill</div>
+            <div className="flex flex-wrap gap-2">
+              {eligibleTargets.map((pid) => (
+                <button
+                  key={pid}
+                  type="button"
+                  className="sd-kill-btn"
+                  onClick={() => {
+                    getSocket().emit("player:assignKillTarget", { code, targetId: pid });
+                    setEligibleTargets([]);
+                  }}
+                >
+                  {playerNameById.get(pid) ?? pid.slice(0, 6)}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="sd-video">
+          <StageVideoLayout
+            code={code}
+            identity={playerId}
+            hostIdentity={`host-${code}`}
+            leftIdentities={state?.slots?.A || []}
+            rightIdentities={state?.slots?.B || []}
+            playerNames={Object.fromEntries(
+              (state?.players || []).map((p: any) => [p.id, p.name || p.id.slice(0, 6)])
+            )}
+            screen={<GameScreen screen={state?.screen} />}
+          />
+        </div>
+
+        {state?.players ? (
+          <div className="sd-roster">
+            {(["A", "B"] as const).map((t) => (
+              <div key={t}>
+                <h3>TEAM {t}</h3>
+                <ul>
+                  {(state.slots?.[t] || []).map((pid: string) => {
+                    const p = (state.players || []).find((pp: any) => pp.id === pid);
+                    if (!p) return null;
+                    return (
+                      <li key={pid}>
+                        <span>
+                          {p.name}
+                          {p.id === playerId ? " *" : ""}
+                        </span>
+                        <span className="sd-dots">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <span key={i} className={i < (p.buzzesRemaining ?? 0) ? "on" : ""} />
+                          ))}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ))}
           </div>
-        </div>
-      )}
-
-      <StageVideoLayout
-        code={code}
-        identity={playerId}
-        hostIdentity={`host-${code}`}
-        leftIdentities={state?.slots?.A || []}
-        rightIdentities={state?.slots?.B || []}
-        playerNames={Object.fromEntries(
-          (state?.players || []).map((p: any) => [p.id, p.name || p.id.slice(0, 6)])
-        )}
-        screen={<GameScreen screen={state?.screen} />}
-      />
-
-      {state?.players && (
-        <div className="grid grid-cols-2 gap-6">
-          {(["A", "B"] as const).map((t) => (
-            <div key={t}>
-              <div className={`mono text-xs tracking-[0.16em] uppercase mb-2 ${t === "A" ? "team-a" : "team-b"}`}>
-                Team {t}
-              </div>
-              <ul className="m-0 p-0 list-none flex flex-col gap-2">
-                {(state.slots?.[t] || []).map((pid: string) => {
-                  const p = (state.players || []).find((pp: any) => pp.id === pid);
-                  if (!p) return null;
-                  return (
-                    <li key={pid} className="flex items-center justify-between text-sm">
-                      <span>
-                        {p.name}
-                        {p.id === playerId ? " · you" : ""}
-                      </span>
-                      <span className="buzz-dots">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <span key={i} className={`dot ${i < (p.buzzesRemaining ?? 0) ? "on" : ""}`} />
-                        ))}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-        </div>
-      )}
+        ) : null}
+      </div>
     </main>
   );
 }
