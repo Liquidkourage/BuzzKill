@@ -18,7 +18,7 @@ const PHASE_HINT: Record<PhaseKind, string> = {
   open: "HIT IT",
   locked: "LOCKED",
   steal_open: "STEAL WINDOW",
-  ended: "GAME OVER",
+  ended: "MATCH OVER",
 };
 
 export default function PlayPage() {
@@ -87,7 +87,7 @@ export default function PlayPage() {
       setBanner(p.playerId === playerId ? "YOU STOLE IT" : `${p.name} STOLE`);
     });
     socket.on("match:end", () => setBanner("FINAL"));
-    socket.on("match:overtime", () => setBanner("SUDDEN DEATH"));
+    socket.on("match:overtime", () => setBanner("OVERTIME"));
     return () => {
       socket.off("room:state");
       socket.off("kill:promptTargets");
@@ -173,11 +173,10 @@ export default function PlayPage() {
 
   if (!playerId) {
     return (
-      <main className="shell-sudden">
-        <div className="sd-hazard" aria-hidden />
-        <div className="sd-wrap gap-6" style={{ gap: "1.5rem", paddingTop: "2rem" }}>
+      <main className="shell-arcade">
+        <div className="arc-wrap" style={{ gap: "1.5rem", paddingTop: "2rem" }}>
           <div>
-            <div className="sd-kicker">
+            <div className="arc-kicker">
               <Link href="/">BUZZKILL</Link>
             </div>
             <h1
@@ -187,12 +186,12 @@ export default function PlayPage() {
                 fontSize: "clamp(3rem, 16vw, 4.5rem)",
                 letterSpacing: "-0.03em",
                 textTransform: "uppercase",
-                color: "var(--sd-yellow)",
+                color: "var(--arc-yellow)",
               }}
             >
               Join
             </h1>
-            <p className="sd-meta mt-3 m-0">ENTER THE CODE. PICK A SIDE. TRY NOT TO CHOKE.</p>
+            <p className="arc-meta mt-3 m-0">ROOM CODE. YOUR NAME. PICK A SIDE.</p>
           </div>
           <div className="flex flex-col gap-3">
             <input
@@ -224,12 +223,12 @@ export default function PlayPage() {
               </button>
             </div>
             {joinError ? (
-              <p className="m-0 sd-meta" style={{ color: "var(--sd-red)" }}>
+              <p className="m-0 arc-meta" style={{ color: "var(--arc-red)" }}>
                 {joinError}
               </p>
             ) : null}
             <button className="btn btn-buzz text-lg py-4" onClick={join}>
-              INSERT COIN
+              LET&apos;S GO
             </button>
           </div>
         </div>
@@ -241,15 +240,14 @@ export default function PlayPage() {
   const live = phase === "open" || phase === "steal_open";
 
   return (
-    <main className="shell-sudden">
-      <div className="sd-hazard" aria-hidden />
-      <div className="sd-wrap">
-        <header className="sd-top">
+    <main className="shell-arcade">
+      <div className="arc-wrap">
+        <header className="arc-top">
           <div>
-            <div className="sd-kicker">
+            <div className="arc-kicker">
               <Link href="/">BUZZKILL</Link>
               <span style={{ opacity: 0.45 }}> · </span>
-              SUDDEN DEATH
+              MATCH NIGHT
             </div>
             <div
               style={{
@@ -257,12 +255,12 @@ export default function PlayPage() {
                 fontSize: "1.75rem",
                 textTransform: "uppercase",
                 marginTop: "0.35rem",
-                color: "var(--sd-yellow)",
+                color: "var(--arc-yellow)",
               }}
             >
               {me?.name || name}
             </div>
-            <p className="sd-meta m-0 mt-1">
+            <p className="arc-meta m-0 mt-1">
               TEAM {me?.team || team}
               <span style={{ opacity: 0.4 }}> · </span>
               {code}
@@ -284,52 +282,52 @@ export default function PlayPage() {
         </header>
 
         {state ? (
-          <div className="sd-scores">
+          <div className="arc-scores">
             <div>
-              <div className="sd-score-label">{state?.teamNames?.A || "P1"}</div>
-              <div className="sd-score" data-side="a">
+              <div className="arc-score-label">{state?.teamNames?.A || "P1"}</div>
+              <div className="arc-score" data-side="a">
                 {String(state?.scores?.A ?? 0).padStart(2, "0")}
               </div>
             </div>
-            <div className="sd-phase" data-live={live ? "true" : "false"}>
+            <div className="arc-phase" data-live={live ? "true" : "false"}>
               <div>{banner || PHASE_HINT[phase]}</div>
-              <div className="mt-2" style={{ color: "var(--sd-mute)" }}>
+              <div className="mt-2" style={{ color: "var(--arc-mute)" }}>
                 Q {Number(state?.questionIndex ?? 0) + 1}/{state?.maxQuestions ?? 20}
               </div>
             </div>
             <div>
-              <div className="sd-score-label" style={{ textAlign: "right" }}>
+              <div className="arc-score-label" style={{ textAlign: "right" }}>
                 {state?.teamNames?.B || "P2"}
               </div>
-              <div className="sd-score" data-side="b">
+              <div className="arc-score" data-side="b">
                 {String(state?.scores?.B ?? 0).padStart(2, "0")}
               </div>
             </div>
           </div>
         ) : null}
 
-        <section className="sd-frame" aria-live="polite">
-          {screen?.category ? <div className="sd-cat">{screen.category}</div> : null}
+        <section className="arc-frame" aria-live="polite">
+          {screen?.category ? <div className="arc-cat">{screen.category}</div> : null}
           {screen?.question ? (
-            <p className="sd-q">{screen.question}</p>
+            <p className="arc-q">{screen.question}</p>
           ) : (
-            <p className="sd-q-idle m-0">AWAITING QUESTION</p>
+            <p className="arc-q-idle m-0">AWAITING QUESTION</p>
           )}
-          {screen?.revealed ? <div className="sd-answer">{screen.answer || "—"}</div> : null}
+          {screen?.revealed ? <div className="arc-answer">{screen.answer || "—"}</div> : null}
         </section>
 
         <div className="flex flex-col gap-2">
           <button
-            className="sd-buzz"
+            className="arc-buzz"
             data-ready={canBuzz ? "true" : "false"}
             onClick={() => canBuzz && getSocket().emit("player:buzz", { code })}
             disabled={!canBuzz}
           >
             BUZZ
           </button>
-          {!canBuzz ? <p className="sd-hint">{PHASE_HINT[phase]}</p> : null}
+          {!canBuzz ? <p className="arc-hint">{PHASE_HINT[phase]}</p> : null}
           {me ? (
-            <div className="sd-dots" aria-label={`${me.buzzesRemaining} buzzes remaining`}>
+            <div className="arc-dots" aria-label={`${me.buzzesRemaining} buzzes remaining`}>
               {Array.from({ length: 5 }).map((_, i) => (
                 <span key={i} className={i < (me.buzzesRemaining ?? 0) ? "on" : ""} />
               ))}
@@ -338,14 +336,14 @@ export default function PlayPage() {
         </div>
 
         {eligibleTargets.length > 0 && !state?.overtime ? (
-          <div className="sd-kill">
-            <div className="sd-kill-title">BuzzKill</div>
+          <div className="arc-kill">
+            <div className="arc-kill-title">BuzzKill</div>
             <div className="flex flex-wrap gap-2">
               {eligibleTargets.map((pid) => (
                 <button
                   key={pid}
                   type="button"
-                  className="sd-kill-btn"
+                  className="arc-kill-btn"
                   onClick={() => {
                     getSocket().emit("player:assignKillTarget", { code, targetId: pid });
                     setEligibleTargets([]);
@@ -358,7 +356,7 @@ export default function PlayPage() {
           </div>
         ) : null}
 
-        <div className="sd-video">
+        <div className="arc-video">
           <StageVideoLayout
             code={code}
             identity={playerId}
@@ -373,7 +371,7 @@ export default function PlayPage() {
         </div>
 
         {state?.players ? (
-          <div className="sd-roster">
+          <div className="arc-roster">
             {(["A", "B"] as const).map((t) => (
               <div key={t}>
                 <h3>TEAM {t}</h3>
@@ -387,7 +385,7 @@ export default function PlayPage() {
                           {p.name}
                           {p.id === playerId ? " *" : ""}
                         </span>
-                        <span className="sd-dots">
+                        <span className="arc-dots">
                           {Array.from({ length: 5 }).map((_, i) => (
                             <span key={i} className={i < (p.buzzesRemaining ?? 0) ? "on" : ""} />
                           ))}

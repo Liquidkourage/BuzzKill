@@ -655,36 +655,26 @@ textarea.field {
   }
 }
 
-/* ——— Sudden Death (player stage) ———
-   Synth of slap-pad + cabinet offset + HUD brackets.
-   Void black · hazard yellow · pure red slap. */
-.shell-sudden {
-  --sd-void: #000000;
-  --sd-panel: #0a0a0a;
-  --sd-yellow: #ffe600;
-  --sd-yellow-dim: #6a6400;
-  --sd-red: #ff0000;
-  --sd-red-deep: #8a0000;
-  --sd-ink: #ffe600;
-  --sd-mute: #5c5800;
-  --sd-line: #222200;
+/* ——— Arcade cabinet (player stage) ———
+   Void black · coin yellow · slap-red buzz. Fun cabinet energy. */
+.shell-arcade {
+  --arc-void: #000000;
+  --arc-panel: #0a0a0a;
+  --arc-yellow: #ffe600;
+  --arc-yellow-dim: #6a6400;
+  --arc-red: #ff0000;
+  --arc-red-deep: #8a0000;
+  --arc-ink: #ffe600;
+  --arc-mute: #5c5800;
+  --arc-line: #222200;
   --radius: 0px;
   min-height: 100vh;
-  color: var(--sd-ink);
-  background: var(--sd-void);
+  color: var(--arc-ink);
+  background: var(--arc-void);
   font-family: var(--font-body);
 }
 
-.shell-sudden .sd-hazard {
-  height: 10px;
-  background: repeating-linear-gradient(
-    -45deg,
-    var(--sd-yellow) 0 10px,
-    #000 10px 20px
-  );
-}
-
-.shell-sudden .sd-wrap {
+.shell-arcade .arc-wrap {
   max-width: 42rem;
   margin: 0 auto;
   padding: 0.85rem 1rem 2rem;
@@ -693,37 +683,37 @@ textarea.field {
   gap: 0.85rem;
 }
 
-.shell-sudden .sd-kicker {
+.shell-arcade .arc-kicker {
   font-family: var(--font-arcade), var(--font-mono);
   font-size: 0.58rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--sd-yellow);
+  color: var(--arc-yellow);
 }
 
-.shell-sudden .sd-kicker a {
+.shell-arcade .arc-kicker a {
   color: inherit;
 }
 
-.shell-sudden .sd-meta {
+.shell-arcade .arc-meta {
   font-family: var(--font-arcade), var(--font-mono);
   font-size: 0.55rem;
   letter-spacing: 0.08em;
-  color: var(--sd-mute);
+  color: var(--arc-mute);
   line-height: 1.6;
 }
 
-.shell-sudden .sd-top {
+.shell-arcade .arc-top {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.75rem;
-  border-bottom: 2px solid var(--sd-yellow);
+  border-bottom: 2px solid var(--arc-yellow);
   padding-bottom: 0.75rem;
 }
 
-.shell-sudden .sd-scores {
+.shell-arcade .arc-scores {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   gap: 0.5rem;
@@ -731,44 +721,44 @@ textarea.field {
   padding: 0.35rem 0;
 }
 
-.shell-sudden .sd-score {
+.shell-arcade .arc-score {
   font-family: var(--font-punch), var(--font-display);
   font-size: clamp(3.2rem, 14vw, 5rem);
   line-height: 0.9;
   letter-spacing: -0.04em;
-  color: var(--sd-yellow);
+  color: var(--arc-yellow);
 }
 
-.shell-sudden .sd-score[data-side="b"] {
+.shell-arcade .arc-score[data-side="b"] {
   text-align: right;
 }
 
-.shell-sudden .sd-score-label {
+.shell-arcade .arc-score-label {
   font-family: var(--font-arcade), var(--font-mono);
   font-size: 0.52rem;
   letter-spacing: 0.12em;
-  color: var(--sd-mute);
+  color: var(--arc-mute);
   margin-bottom: 0.2rem;
 }
 
-.shell-sudden .sd-phase {
+.shell-arcade .arc-phase {
   text-align: center;
   font-family: var(--font-arcade), var(--font-mono);
   font-size: 0.52rem;
   letter-spacing: 0.1em;
-  color: var(--sd-yellow);
+  color: var(--arc-yellow);
   max-width: 12rem;
 }
 
-.shell-sudden .sd-phase[data-live="true"] {
-  color: var(--sd-red);
+.shell-arcade .arc-phase[data-live="true"] {
+  color: var(--arc-red);
   animation: pulse-dot 1s ease-in-out infinite;
 }
 
-.shell-sudden .sd-frame {
+.shell-arcade .arc-frame {
   position: relative;
-  background: var(--sd-panel);
-  border: 2px solid var(--sd-yellow);
+  background: var(--arc-panel);
+  border: 2px solid var(--arc-yellow);
   padding: 1.25rem 1rem;
   text-align: center;
   min-height: 7.5rem;
@@ -777,66 +767,66 @@ textarea.field {
   gap: 0.55rem;
 }
 
-.shell-sudden .sd-frame::before,
-.shell-sudden .sd-frame::after {
+.shell-arcade .arc-frame::before,
+.shell-arcade .arc-frame::after {
   content: "";
   position: absolute;
   width: 18px;
   height: 18px;
-  border-color: var(--sd-yellow);
+  border-color: var(--arc-yellow);
   border-style: solid;
 }
 
-.shell-sudden .sd-frame::before {
+.shell-arcade .arc-frame::before {
   top: 6px;
   left: 6px;
   border-width: 3px 0 0 3px;
 }
 
-.shell-sudden .sd-frame::after {
+.shell-arcade .arc-frame::after {
   bottom: 6px;
   right: 6px;
   border-width: 0 3px 3px 0;
 }
 
-.shell-sudden .sd-cat {
+.shell-arcade .arc-cat {
   font-family: var(--font-arcade), var(--font-mono);
   font-size: 0.55rem;
   letter-spacing: 0.16em;
-  color: var(--sd-yellow);
+  color: var(--arc-yellow);
 }
 
-.shell-sudden .sd-q {
+.shell-arcade .arc-q {
   font-family: var(--font-punch), var(--font-display);
   font-size: clamp(1.15rem, 4.2vw, 1.65rem);
   line-height: 1.2;
   letter-spacing: -0.01em;
-  color: var(--sd-yellow);
+  color: var(--arc-yellow);
   text-transform: uppercase;
   max-width: 28ch;
   margin: 0 auto;
 }
 
-.shell-sudden .sd-q-idle {
+.shell-arcade .arc-q-idle {
   font-family: var(--font-arcade), var(--font-mono);
   font-size: 0.55rem;
   letter-spacing: 0.14em;
-  color: var(--sd-mute);
+  color: var(--arc-mute);
 }
 
-.shell-sudden .sd-answer {
+.shell-arcade .arc-answer {
   font-family: var(--font-arcade), var(--font-mono);
   font-size: 0.65rem;
   color: #fff;
   letter-spacing: 0.06em;
 }
 
-.shell-sudden .sd-buzz {
+.shell-arcade .arc-buzz {
   width: 100%;
   min-height: 7.25rem;
   border: 3px solid #000;
   border-radius: 0;
-  background: var(--sd-red);
+  background: var(--arc-red);
   color: #fff;
   font-family: var(--font-punch), var(--font-display);
   font-size: clamp(2.6rem, 12vw, 4rem);
@@ -847,69 +837,69 @@ textarea.field {
   transition: transform 90ms ease, box-shadow 90ms ease, filter 120ms ease;
 }
 
-.shell-sudden .sd-buzz[data-ready="true"] {
-  animation: sd-buzz-pulse 1.8s steps(2, end) infinite;
+.shell-arcade .arc-buzz[data-ready="true"] {
+  animation: arc-buzz-pulse 1.8s steps(2, end) infinite;
 }
 
-.shell-sudden .sd-buzz[data-ready="true"]:active {
+.shell-arcade .arc-buzz[data-ready="true"]:active {
   transform: translate(4px, 4px);
   box-shadow: 2px 2px 0 #000;
   animation: none;
 }
 
-.shell-sudden .sd-buzz[data-ready="false"] {
+.shell-arcade .arc-buzz[data-ready="false"] {
   background: #1a1a1a;
   color: #3a3a00;
-  border-color: var(--sd-line);
+  border-color: var(--arc-line);
   box-shadow: none;
   cursor: not-allowed;
 }
 
-.shell-sudden .sd-hint {
+.shell-arcade .arc-hint {
   font-family: var(--font-arcade), var(--font-mono);
   font-size: 0.5rem;
   letter-spacing: 0.12em;
   text-align: center;
-  color: var(--sd-mute);
+  color: var(--arc-mute);
   margin: 0;
 }
 
-.shell-sudden .sd-dots {
+.shell-arcade .arc-dots {
   display: flex;
   justify-content: center;
   gap: 0.4rem;
 }
 
-.shell-sudden .sd-dots span {
+.shell-arcade .arc-dots span {
   width: 12px;
   height: 12px;
-  background: var(--sd-line);
+  background: var(--arc-line);
   transform: skewX(-14deg);
 }
 
-.shell-sudden .sd-dots span.on {
-  background: var(--sd-yellow);
+.shell-arcade .arc-dots span.on {
+  background: var(--arc-yellow);
 }
 
-.shell-sudden .sd-kill {
-  border: 2px solid var(--sd-red);
+.shell-arcade .arc-kill {
+  border: 2px solid var(--arc-red);
   padding: 0.85rem;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
 }
 
-.shell-sudden .sd-kill-title {
+.shell-arcade .arc-kill-title {
   font-family: var(--font-punch), var(--font-display);
   font-size: 1.4rem;
-  color: var(--sd-red);
+  color: var(--arc-red);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.shell-sudden .sd-kill-btn {
+.shell-arcade .arc-kill-btn {
   border: 2px solid #000;
-  background: var(--sd-red);
+  background: var(--arc-red);
   color: #fff;
   font-family: var(--font-arcade), var(--font-mono);
   font-size: 0.55rem;
@@ -919,37 +909,37 @@ textarea.field {
   box-shadow: 3px 3px 0 #000;
 }
 
-.shell-sudden .sd-kill-btn:active {
+.shell-arcade .arc-kill-btn:active {
   transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 #000;
 }
 
-.shell-sudden .sd-video {
-  border: 2px solid var(--sd-line);
+.shell-arcade .arc-video {
+  border: 2px solid var(--arc-line);
   overflow: hidden;
 }
 
-.shell-sudden .sd-video .video-shell {
+.shell-arcade .arc-video .video-shell {
   border: 0;
 }
 
-.shell-sudden .sd-roster {
+.shell-arcade .arc-roster {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
-  border-top: 2px solid var(--sd-line);
+  border-top: 2px solid var(--arc-line);
   padding-top: 0.75rem;
 }
 
-.shell-sudden .sd-roster h3 {
+.shell-arcade .arc-roster h3 {
   font-family: var(--font-arcade), var(--font-mono);
   font-size: 0.52rem;
   letter-spacing: 0.12em;
-  color: var(--sd-mute);
+  color: var(--arc-mute);
   margin: 0 0 0.5rem;
 }
 
-.shell-sudden .sd-roster ul {
+.shell-arcade .arc-roster ul {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -958,27 +948,27 @@ textarea.field {
   gap: 0.4rem;
 }
 
-.shell-sudden .sd-roster li {
+.shell-arcade .arc-roster li {
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
   font-size: 0.85rem;
-  color: var(--sd-yellow);
+  color: var(--arc-yellow);
 }
 
-.shell-sudden .field {
-  border: 2px solid var(--sd-yellow);
+.shell-arcade .field {
+  border: 2px solid var(--arc-yellow);
   background: #000;
-  color: var(--sd-yellow);
+  color: var(--arc-yellow);
   border-radius: 0;
 }
 
-.shell-sudden .field:focus {
-  border-color: var(--sd-red);
+.shell-arcade .field:focus {
+  border-color: var(--arc-red);
   outline: none;
 }
 
-.shell-sudden .btn {
+.shell-arcade .btn {
   border-radius: 0;
   font-family: var(--font-arcade), var(--font-mono);
   font-size: 0.65rem;
@@ -986,82 +976,82 @@ textarea.field {
   box-shadow: 3px 3px 0 #000;
 }
 
-.shell-sudden .btn:not(:disabled):active {
+.shell-arcade .btn:not(:disabled):active {
   transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 #000;
 }
 
-.shell-sudden .btn-buzz {
-  background: var(--sd-red);
+.shell-arcade .btn-buzz {
+  background: var(--arc-red);
   border-color: #000;
   color: #fff;
 }
 
-.shell-sudden .btn-ink {
-  background: var(--sd-yellow);
+.shell-arcade .btn-ink {
+  background: var(--arc-yellow);
   border-color: #000;
   color: #000;
 }
 
-.shell-sudden .btn-ghost {
+.shell-arcade .btn-ghost {
   background: transparent;
-  border-color: var(--sd-yellow);
-  color: var(--sd-yellow);
+  border-color: var(--arc-yellow);
+  color: var(--arc-yellow);
   box-shadow: none;
 }
 
-.shell-sudden .timer-rail .seconds {
+.shell-arcade .timer-rail .seconds {
   font-family: var(--font-punch), var(--font-display);
-  color: var(--sd-yellow);
+  color: var(--arc-yellow);
 }
 
-.shell-sudden .timer-rail .label {
+.shell-arcade .timer-rail .label {
   font-family: var(--font-arcade), var(--font-mono);
   font-size: 0.5rem;
-  color: var(--sd-mute);
+  color: var(--arc-mute);
 }
 
-.shell-sudden .timer-track {
+.shell-arcade .timer-track {
   border-radius: 0;
-  background: var(--sd-line);
+  background: var(--arc-line);
   height: 6px;
 }
 
-.shell-sudden .timer-track > i {
-  background: var(--sd-yellow);
+.shell-arcade .timer-track > i {
+  background: var(--arc-yellow);
 }
 
-.shell-sudden .timer-rail[data-urgent="true"] .seconds {
-  color: var(--sd-red);
+.shell-arcade .timer-rail[data-urgent="true"] .seconds {
+  color: var(--arc-red);
 }
 
-.shell-sudden .timer-rail[data-urgent="true"] .timer-track > i {
-  background: var(--sd-red);
+.shell-arcade .timer-rail[data-urgent="true"] .timer-track > i {
+  background: var(--arc-red);
 }
 
-.shell-sudden .game-screen {
+.shell-arcade .game-screen {
   background: #000;
   border: 0;
 }
 
-.shell-sudden .game-screen .cat,
-.shell-sudden .game-screen .q {
-  color: var(--sd-yellow);
+.shell-arcade .game-screen .cat,
+.shell-arcade .game-screen .q {
+  color: var(--arc-yellow);
   font-family: var(--font-punch), var(--font-display);
   text-transform: uppercase;
 }
 
-.shell-sudden .game-screen .cat {
+.shell-arcade .game-screen .cat {
   font-family: var(--font-arcade), var(--font-mono);
   font-size: 0.55rem;
 }
 
-.shell-sudden .game-screen .idle {
+.shell-arcade .game-screen .idle {
   font-family: var(--font-arcade), var(--font-mono);
-  color: var(--sd-mute);
+  color: var(--arc-mute);
 }
 
-@keyframes sd-buzz-pulse {
+@keyframes arc-buzz-pulse {
   0%,
   100% {
     filter: brightness(1);
@@ -1072,11 +1062,11 @@ textarea.field {
 }
 
 @media (min-width: 900px) {
-  .shell-sudden .sd-wrap {
+  .shell-arcade .arc-wrap {
     max-width: 56rem;
   }
 
-  .shell-sudden .sd-buzz {
+  .shell-arcade .arc-buzz {
     min-height: 8.5rem;
   }
 }
