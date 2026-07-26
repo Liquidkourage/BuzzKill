@@ -184,7 +184,7 @@ export default function HostPage() {
           </Link>
           <h1 className="display text-6xl mt-3">Match night</h1>
           <p className="mt-3 text-[color:var(--stage-muted)] text-lg">
-            Pair two league teams, open a room, and run the board. Results feed standings.
+            Pair two teams, load a pack, open the room. Keep it tight — the table is watching.
           </p>
         </div>
 

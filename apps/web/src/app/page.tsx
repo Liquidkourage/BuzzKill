@@ -19,14 +19,14 @@ export default async function Home() {
   const season = league?.season;
   const blurb =
     season?.blurb ||
-    "A live video trivia league. Teams pay to enter the season, show up on match night, and climb the table.";
+    "Paid team trivia on live video. Bring a roster, hit the buzzer, try not to get BuzzKilled.";
 
   return (
     <div className="shell-light">
       <header className="hero">
         <nav className="hero-nav">
           <span className="mono text-xs tracking-[0.2em] uppercase text-[color:var(--muted)]">
-            {league?.organizer || "Organizer-run league"}
+            {league?.organizer || "League night, not TED Talk"}
           </span>
           <div className="flex gap-4">
             <Link
@@ -54,7 +54,7 @@ export default async function Home() {
                 Enter your team
               </Link>
               <Link href="/standings" className="btn btn-ink">
-                View standings
+                Check the table
               </Link>
             </div>
             {season ? (
@@ -71,32 +71,32 @@ export default async function Home() {
       </header>
 
       <section className="section">
-        <h2>How the league works</h2>
+        <h2>How it works</h2>
         <p className="max-w-xl text-[color:var(--muted)] text-lg">
-          You pay the organizer for a season seat. On match night, your roster joins the live room on camera.
+          Pay for a seat, show up on camera, answer fast. Bragging rights optional — standings are not.
         </p>
         <ol className="rule-list max-w-3xl">
           <li>
             <div>
-              <strong>Register &amp; pay</strong>
+              <strong>Buy in</strong>
               <p className="m-0 mt-1 text-[color:var(--muted)]">
-                Submit your team and captain. Dues stay pending until the organizer confirms payment.
+                Register the team and captain. You stay pending until the organizer marks dues paid.
               </p>
             </div>
           </li>
           <li>
             <div>
-              <strong>Show up for match night</strong>
+              <strong>Match night</strong>
               <p className="m-0 mt-1 text-[color:var(--muted)]">
-                Use the room code from the organizer. Four players per side, live video, timed buzzers.
+                Room code, four on a side, live video, fifteen seconds on the clock. No essay answers.
               </p>
             </div>
           </li>
           <li>
             <div>
-              <strong>Climb the table</strong>
+              <strong>Climb or cope</strong>
               <p className="m-0 mt-1 text-[color:var(--muted)]">
-                Wins, losses, and points feed the season standings after each completed match.
+                Finished matches update the season table. Wins count. Vibes do not.
               </p>
             </div>
           </li>
@@ -106,7 +106,7 @@ export default async function Home() {
             Enter the season
           </Link>
           <Link href="/host" className="btn btn-ghost">
-            Organizer: run match
+            Run match night
           </Link>
         </div>
       </section>

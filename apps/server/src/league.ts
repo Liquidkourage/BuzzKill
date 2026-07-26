@@ -31,7 +31,7 @@ export async function ensureActiveSeason() {
         "Pay the organizer to confirm your spot. Your registration stays pending until marked paid.",
       blurb:
         process.env.LEAGUE_BLURB ||
-        "A live video trivia league. Teams enter the season, show up on match night, and climb the table.",
+        "Paid team trivia on live video. Bring a roster, hit the buzzer, try not to get BuzzKilled.",
     },
   });
 }

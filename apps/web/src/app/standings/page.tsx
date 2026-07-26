@@ -29,6 +29,7 @@ export default async function StandingsPage() {
           <p className="mt-2 text-[color:var(--muted)] m-0">
             {season?.name || "Current season"}
             {season?.status ? ` · ${season.status}` : ""}
+            <span className="opacity-50"> — receipts only</span>
           </p>
         </div>
         <div className="flex gap-2">

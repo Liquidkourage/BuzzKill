@@ -22,7 +22,7 @@ const ibm = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "BuzzKill",
-  description: "Live team trivia with buzzers, steals, and BuzzKills.",
+  description: "A live team trivia league. Buzzers, steals, and the occasional ego check.",
 };
 
 export default function RootLayout({
