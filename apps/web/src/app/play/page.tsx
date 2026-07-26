@@ -252,7 +252,9 @@ export default function PlayPage() {
       {state && (
         <div className="board">
           <div>
-            <div className="mono text-xs tracking-[0.16em] uppercase team-a">A</div>
+            <div className="mono text-xs tracking-[0.16em] uppercase team-a">
+              {state?.teamNames?.A || "A"}
+            </div>
             <div className="score team-a">{state?.scores?.A ?? 0}</div>
           </div>
           <div className="text-center">
@@ -265,7 +267,9 @@ export default function PlayPage() {
             </div>
           </div>
           <div className="text-right">
-            <div className="mono text-xs tracking-[0.16em] uppercase team-b">B</div>
+            <div className="mono text-xs tracking-[0.16em] uppercase team-b">
+              {state?.teamNames?.B || "B"}
+            </div>
             <div className="score team-b">{state?.scores?.B ?? 0}</div>
           </div>
         </div>

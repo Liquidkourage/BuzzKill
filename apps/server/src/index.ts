@@ -24,6 +24,15 @@ import cors from "cors";
 import fs from "fs";
 import { randomUUID } from "crypto";
 import { prisma } from "./db";
+import {
+  ensureActiveSeason,
+  getLeaguePublic,
+  getStandings,
+  listRegistrations,
+  recordMatchResult,
+  registerTeam,
+  setPaymentStatus,
+} from "./league";
 
 type TeamId = "A" | "B";
 
@@ -56,6 +65,10 @@ interface RoomState {
   overtime: boolean; // sudden-death after regulation tie
   latencyMsByPlayer: Record<string, number>; // playerId -> RTT
   matchId?: string; // persisted match id
+  seasonId?: string;
+  teamAId?: string;
+  teamBId?: string;
+  teamNames?: { A: string; B: string };
   screen?: { category?: string; question?: string; answer?: string; revealed?: boolean };
 }
 
@@ -88,6 +101,109 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cors({ origin: "*" }));
+app.use(express.json({ limit: "100kb" }));
+
+function organizerAuthorized(req: express.Request): boolean {
+  const key = process.env.ORGANIZER_KEY;
+  if (!key) return false;
+  const header = String(req.headers["x-organizer-key"] || "");
+  const query = String(req.query.key || "");
+  return header === key || query === key;
+}
+
+async function finalizeMatch(matchId: string, scores: { A: number; B: number }) {
+  try {
+    await prisma.match.update({
+      where: { id: matchId },
+      data: { status: "completed", scoreA: scores.A, scoreB: scores.B },
+    });
+    await recordMatchResult(matchId);
+  } catch (err) {
+    logDbError("finalizeMatch", err);
+  }
+}
+
+// ——— League (public) ———
+app.get("/league", async (_req, res) => {
+  try {
+    res.json(await getLeaguePublic());
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "failed to load league" });
+  }
+});
+
+app.get("/league/standings", async (_req, res) => {
+  try {
+    res.json(await getStandings());
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "failed to load standings" });
+  }
+});
+
+app.get("/league/teams", async (_req, res) => {
+  try {
+    const { season, registrations } = await listRegistrations();
+    res.json({
+      season: { id: season.id, name: season.name, status: season.status },
+      teams: registrations.map((r) => ({
+        registrationId: r.id,
+        teamId: r.teamId,
+        name: r.team.name,
+        slug: r.team.slug,
+        paymentStatus: r.paymentStatus,
+        captainName: r.captainName,
+        wins: r.wins,
+        losses: r.losses,
+        ties: r.ties,
+      })),
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "failed to list teams" });
+  }
+});
+
+app.post("/league/register", async (req, res) => {
+  try {
+    const registration = await registerTeam({
+      teamName: String(req.body?.teamName || ""),
+      captainName: String(req.body?.captainName || ""),
+      captainEmail: String(req.body?.captainEmail || ""),
+      captainPhone: req.body?.captainPhone ? String(req.body.captainPhone) : undefined,
+      rosterText: String(req.body?.rosterText || ""),
+    });
+    res.status(201).json({
+      ok: true,
+      registration: {
+        id: registration.id,
+        teamId: registration.teamId,
+        teamName: registration.team.name,
+        paymentStatus: registration.paymentStatus,
+        seasonName: registration.season.name,
+        entryFeeCents: registration.season.entryFeeCents,
+        entryNote: registration.season.entryNote,
+      },
+    });
+  } catch (err: any) {
+    res.status(err?.status || 500).json({ error: err?.message || "registration failed" });
+  }
+});
+
+// Organizer: mark dues paid (requires ORGANIZER_KEY)
+app.post("/league/registrations/:id/payment", async (req, res) => {
+  if (!organizerAuthorized(req)) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  const status = String(req.body?.paymentStatus || "");
+  if (!["pending", "paid", "waived"].includes(status)) {
+    return res.status(400).json({ error: "paymentStatus must be pending|paid|waived" });
+  }
+  try {
+    const row = await setPaymentStatus(req.params.id, status as "pending" | "paid" | "waived");
+    res.json({ ok: true, registration: row });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "update failed" });
+  }
+});
 
 // Health: liveness + optional DB/LiveKit readiness (no secrets)
 app.get("/health", async (_req, res) => {
@@ -273,6 +389,8 @@ function publishState(state: RoomState) {
     slots: state.slots,
     latencyMsByPlayer: state.latencyMsByPlayer,
     screen: state.screen,
+    teamNames: state.teamNames,
+    seasonId: state.seasonId,
     players: Object.values(state.players).map((p) => ({
       id: p.id,
       name: p.name,
@@ -321,37 +439,103 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Host creates a room
-  socket.on("host:createRoom", (_, ack?: (payload: { code: string }) => void) => {
-    const code = generateRoomCode();
-    const state: RoomState = {
-      code,
-      hostSocketId: socket.id,
-      players: {},
-      socketsToPlayers: {},
-      slots: { A: [], B: [] },
-      scores: { A: 0, B: 0 },
-      questionIndex: 0,
-      maxQuestions: 20,
-      phase: { kind: "idle" },
-      overtime: false,
-      latencyMsByPlayer: {},
-      screen: undefined,
-    };
-    rooms.set(code, state);
-    socket.join(code);
-    ack?.({ code });
-    socket.emit("host:created", { code });
-    publishState(state);
-    // Persist Match (fire-and-forget)
-    prisma.match
-      .create({ data: { code, status: "live", teamA: { create: { name: `Team A ${code}` } }, teamB: { create: { name: `Team B ${code}` } } } })
-      .then((m: any) => {
-        state.matchId = m.id;
-        return prisma.matchEvent.create({ data: { matchId: m.id, type: "room_created", payload: { code } } });
-      })
-      .catch((err) => logDbError("match.create", err));
-  });
+  // Host creates a room (optionally bind two league teams for standings)
+  socket.on(
+    "host:createRoom",
+    async (
+      payload: { teamAId?: string; teamBId?: string } | undefined,
+      ack?: (payload: { code: string; ok?: boolean; reason?: string }) => void
+    ) => {
+      const code = generateRoomCode();
+      let seasonId: string | undefined;
+      let teamAId: string | undefined;
+      let teamBId: string | undefined;
+      let teamNames = { A: "Team A", B: "Team B" };
+
+      try {
+        const season = await ensureActiveSeason();
+        seasonId = season.id;
+        if (payload?.teamAId && payload?.teamBId && payload.teamAId !== payload.teamBId) {
+          const [regA, regB] = await Promise.all([
+            prisma.registration.findUnique({
+              where: { seasonId_teamId: { seasonId: season.id, teamId: payload.teamAId } },
+              include: { team: true },
+            }),
+            prisma.registration.findUnique({
+              where: { seasonId_teamId: { seasonId: season.id, teamId: payload.teamBId } },
+              include: { team: true },
+            }),
+          ]);
+          if (!regA || !regB) {
+            ack?.({ code: "", ok: false, reason: "Both teams must be registered this season" });
+            return;
+          }
+          teamAId = regA.teamId;
+          teamBId = regB.teamId;
+          teamNames = { A: regA.team.name, B: regB.team.name };
+        }
+      } catch (err) {
+        logDbError("host:createRoom season", err);
+      }
+
+      const state: RoomState = {
+        code,
+        hostSocketId: socket.id,
+        players: {},
+        socketsToPlayers: {},
+        slots: { A: [], B: [] },
+        scores: { A: 0, B: 0 },
+        questionIndex: 0,
+        maxQuestions: 20,
+        phase: { kind: "idle" },
+        overtime: false,
+        latencyMsByPlayer: {},
+        screen: undefined,
+        seasonId,
+        teamAId,
+        teamBId,
+        teamNames,
+      };
+      rooms.set(code, state);
+      socket.join(code);
+      ack?.({ code, ok: true });
+      socket.emit("host:created", { code, teamNames });
+      publishState(state);
+
+      const createData =
+        teamAId && teamBId
+          ? {
+              code,
+              status: "live",
+              seasonId,
+              teamAId,
+              teamBId,
+            }
+          : {
+              code,
+              status: "live",
+              seasonId,
+              teamA: { create: { name: `Team A ${code}` } },
+              teamB: { create: { name: `Team B ${code}` } },
+            };
+
+      prisma.match
+        .create({ data: createData as any })
+        .then((m: any) => {
+          state.matchId = m.id;
+          state.teamAId = m.teamAId;
+          state.teamBId = m.teamBId;
+          return prisma.matchEvent.create({
+            data: {
+              matchId: m.id,
+              type: "room_created",
+              payload: { code, teamAId: m.teamAId, teamBId: m.teamBId, seasonId },
+            },
+          });
+        })
+        .catch((err) => logDbError("match.create", err));
+    }
+  );
 
   // Host reclaims an existing room after refresh/disconnect
   socket.on(
@@ -444,10 +628,7 @@ io.on("connection", (socket) => {
         state.phase = { kind: "ended" };
         publishState(state);
         io.to(state.code).emit("match:end", { scores: state.scores });
-        if (state.matchId)
-          prisma.match
-            .update({ where: { id: state.matchId }, data: { status: "completed", scoreA: state.scores.A, scoreB: state.scores.B } })
-            .catch((err) => logDbError("persist", err));
+        if (state.matchId) void finalizeMatch(state.matchId, state.scores);
         return;
       }
     }
@@ -598,6 +779,7 @@ io.on("connection", (socket) => {
       state.phase = { kind: "ended" };
       publishState(state);
       io.to(state.code).emit("match:end", { scores: state.scores });
+      if (state.matchId) void finalizeMatch(state.matchId, state.scores);
     } else {
       const eligible = getEligibleTargets(state, answerer.team);
       if (eligible.length === 0) {
@@ -696,10 +878,7 @@ io.on("connection", (socket) => {
       state.phase = { kind: "ended" };
       publishState(state);
       io.to(state.code).emit("match:end", { scores: state.scores });
-      if (state.matchId)
-        prisma.match
-          .update({ where: { id: state.matchId }, data: { status: "completed", scoreA: state.scores.A, scoreB: state.scores.B } })
-          .catch((err) => logDbError("persist", err));
+      if (state.matchId) void finalizeMatch(state.matchId, state.scores);
     } else {
       // No kill on steals
       advanceAfterQuestion(state);

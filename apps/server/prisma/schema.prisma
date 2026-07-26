@@ -1,5 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// BuzzKill league schema — organizer-run seasons, paid team entry, standings
 
 generator client {
   provider = "prisma-client-js"
@@ -19,14 +18,53 @@ model User {
   memberships TeamMember[]
 }
 
+model Season {
+  id            String         @id @default(cuid())
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  name          String
+  slug          String         @unique
+  status        String         @default("open") // open | active | closed
+  entryFeeCents Int            @default(0)
+  entryNote     String?
+  blurb         String?
+  registrations Registration[]
+  matches       Match[]
+}
+
 model Team {
-  id          String       @id @default(cuid())
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  name        String
-  members     TeamMember[]
-  homeMatches Match[]      @relation("homeMatches")
-  awayMatches Match[]      @relation("awayMatches")
+  id            String         @id @default(cuid())
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  name          String
+  slug          String?        @unique
+  members       TeamMember[]
+  homeMatches   Match[]        @relation("homeMatches")
+  awayMatches   Match[]        @relation("awayMatches")
+  registrations Registration[]
+}
+
+model Registration {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  seasonId      String
+  season        Season   @relation(fields: [seasonId], references: [id])
+  teamId        String
+  team          Team     @relation(fields: [teamId], references: [id])
+  captainName   String
+  captainEmail  String
+  captainPhone  String?
+  rosterText    String
+  paymentStatus String   @default("pending") // pending | paid | waived
+  wins          Int      @default(0)
+  losses        Int      @default(0)
+  ties          Int      @default(0)
+  pointsFor     Int      @default(0)
+  pointsAgainst Int      @default(0)
+
+  @@unique([seasonId, teamId])
+  @@index([seasonId])
 }
 
 model TeamMember {
@@ -52,6 +90,8 @@ model Match {
   scoreA       Int          @default(0)
   scoreB       Int          @default(0)
   overtime     Boolean      @default(false)
+  seasonId     String?
+  season       Season?      @relation(fields: [seasonId], references: [id])
   teamAId      String
   teamBId      String
   teamA        Team         @relation("homeMatches", fields: [teamAId], references: [id])

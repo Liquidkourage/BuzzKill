@@ -7,8 +7,11 @@ import { getSocket } from "@/lib/socket";
 import StageVideoLayout from "@/components/StageVideoLayout";
 import GameScreen from "@/components/GameScreen";
 import BigTimer from "@/components/BigTimer";
+import { serverUrl } from "@/lib/league";
 
 type PhaseKind = "idle" | "open" | "locked" | "steal_open" | "ended";
+
+type LeagueTeam = { teamId: string; name: string; paymentStatus: string };
 
 const PHASE_LABEL: Record<PhaseKind, string> = {
   idle: "Stand by",
@@ -31,6 +34,9 @@ export default function HostPage() {
   const [state, setState] = useState<any>(null);
   const [status, setStatus] = useState("");
   const [copied, setCopied] = useState(false);
+  const [leagueTeams, setLeagueTeams] = useState<LeagueTeam[]>([]);
+  const [teamAId, setTeamAId] = useState("");
+  const [teamBId, setTeamBId] = useState("");
 
   useEffect(() => {
     try {
@@ -39,6 +45,10 @@ export default function HostPage() {
     } catch {
       /* ignore */
     }
+    fetch(`${serverUrl()}/league/teams`)
+      .then((r) => r.json())
+      .then((data) => setLeagueTeams(data.teams || []))
+      .catch(() => setLeagueTeams([]));
   }, []);
 
   useEffect(() => {
@@ -80,8 +90,18 @@ export default function HostPage() {
   }, [phase, state]);
 
   const createRoom = () => {
+    const pickingLeague = Boolean(teamAId || teamBId);
+    if (pickingLeague && (!teamAId || !teamBId || teamAId === teamBId)) {
+      setStatus("Pick two different registered teams, or leave both blank for a scratch room");
+      return;
+    }
     setStatus("Opening room…");
-    getSocket().emit("host:createRoom", {}, () => setStatus("Share the room code"));
+    const payload =
+      teamAId && teamBId ? { teamAId, teamBId } : {};
+    getSocket().emit("host:createRoom", payload, (resp: any) => {
+      if (resp?.ok === false) setStatus(resp?.reason || "Could not create room");
+      else setStatus(teamAId && teamBId ? "League match ready — share the room code" : "Scratch room ready");
+    });
   };
 
   const claimRoom = () => {
@@ -126,15 +146,57 @@ export default function HostPage() {
           <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--stage-muted)]">
             BuzzKill
           </Link>
-          <h1 className="display text-6xl mt-3">Host</h1>
+          <h1 className="display text-6xl mt-3">Match night</h1>
           <p className="mt-3 text-[color:var(--stage-muted)] text-lg">
-            Create a room, hand out the code, run the board from one screen.
+            Pair two league teams, open a room, and run the board. Results feed standings.
           </p>
         </div>
 
+        {leagueTeams.length >= 2 ? (
+          <div className="flex flex-col gap-3">
+            <label className="mono text-[0.65rem] tracking-[0.14em] uppercase text-[color:var(--stage-muted)]">
+              Side A
+            </label>
+            <select className="field" value={teamAId} onChange={(e) => setTeamAId(e.target.value)}>
+              <option value="">Select team</option>
+              {leagueTeams.map((t) => (
+                <option key={t.teamId} value={t.teamId} disabled={t.teamId === teamBId}>
+                  {t.name}
+                  {t.paymentStatus !== "paid" ? ` (${t.paymentStatus})` : ""}
+                </option>
+              ))}
+            </select>
+            <label className="mono text-[0.65rem] tracking-[0.14em] uppercase text-[color:var(--stage-muted)]">
+              Side B
+            </label>
+            <select className="field" value={teamBId} onChange={(e) => setTeamBId(e.target.value)}>
+              <option value="">Select team</option>
+              {leagueTeams.map((t) => (
+                <option key={t.teamId} value={t.teamId} disabled={t.teamId === teamAId}>
+                  {t.name}
+                  {t.paymentStatus !== "paid" ? ` (${t.paymentStatus})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <p className="m-0 text-sm text-[color:var(--stage-muted)]">
+            No registered teams yet —{" "}
+            <Link href="/enter" className="underline underline-offset-2">
+              teams enter here
+            </Link>
+            . You can still open a scratch room.
+          </p>
+        )}
+
         <button className="btn btn-buzz text-lg py-3" onClick={createRoom}>
-          Create room
+          {teamAId && teamBId ? "Start league match" : "Open room"}
         </button>
+        {leagueTeams.length >= 2 ? (
+          <p className="m-0 text-xs text-[color:var(--stage-muted)]">
+            Leave both sides blank for a scratch room that won&apos;t touch standings.
+          </p>
+        ) : null}
 
         <div className="strip">
           <div className="w-full text-sm text-[color:var(--stage-muted)]">Already mid-match?</div>
@@ -148,6 +210,9 @@ export default function HostPage() {
             Reclaim host
           </button>
         </div>
+        <Link href="/organizer" className="text-sm text-[color:var(--stage-muted)] underline underline-offset-2">
+          Organizer desk (dues)
+        </Link>
         {status ? <p className="text-sm text-[color:var(--live)]">{status}</p> : null}
       </main>
     );
@@ -197,7 +262,9 @@ export default function HostPage() {
       {state && (
         <div className="board py-2">
           <div>
-            <div className="mono text-xs tracking-[0.16em] uppercase team-a">Team A</div>
+            <div className="mono text-xs tracking-[0.16em] uppercase team-a">
+              {state?.teamNames?.A || "Team A"}
+            </div>
             <div className="score team-a">{state?.scores?.A ?? 0}</div>
           </div>
           <div className="flex flex-col items-center gap-2">
@@ -212,7 +279,9 @@ export default function HostPage() {
             />
           </div>
           <div className="text-right">
-            <div className="mono text-xs tracking-[0.16em] uppercase team-b">Team B</div>
+            <div className="mono text-xs tracking-[0.16em] uppercase team-b">
+              {state?.teamNames?.B || "Team B"}
+            </div>
             <div className="score team-b">{state?.scores?.B ?? 0}</div>
           </div>
         </div>
