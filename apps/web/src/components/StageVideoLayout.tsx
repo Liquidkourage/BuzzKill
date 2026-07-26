@@ -126,27 +126,27 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
       return (
         <div className="relative w-full h-full">
           <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-          {/* Local controls overlay for the current user */}
-          <div className="absolute top-2 left-2 flex gap-2 text-xs">
+          <div className="absolute top-2 left-2 flex gap-1">
             <button
-              className="px-2 py-1 rounded border bg-black/40 text-white"
+              className="btn btn-ghost text-[0.65rem] py-1 px-2"
               onClick={async (e) => { e.stopPropagation(); try {
                 const enabled = (room as any)?.localParticipant?.isMicrophoneEnabled?.() ?? true;
                 await (room as any)?.localParticipant?.setMicrophoneEnabled(!enabled);
               } catch {} }}
             >
-              Toggle Mic
+              Mic
             </button>
             <button
-              className="px-2 py-1 rounded border bg-black/40 text-white"
+              className="btn btn-ghost text-[0.65rem] py-1 px-2"
               onClick={async (e) => { e.stopPropagation(); try {
                 const enabled = (room as any)?.localParticipant?.isCameraEnabled?.() ?? true;
                 await (room as any)?.localParticipant?.setCameraEnabled(!enabled);
               } catch {} }}
             >
-              Toggle Camera
+              Cam
             </button>
           </div>
+          <div className="tile-label">You</div>
         </div>
       );
     }
@@ -188,44 +188,40 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
   while (rightIds.length < 4) rightIds.push("");
 
   return (
-    <div className="grid grid-cols-[1fr_2fr_1fr] grid-rows-4 gap-0 w-full max-w-[1400px] mx-auto">
-      {/* Left column */}
+    <div className="video-shell grid grid-cols-[1fr_2fr_1fr] grid-rows-4 gap-px w-full max-w-[1400px] mx-auto overflow-hidden">
       {leftIds.map((id, idx) => (
         <div
           key={`L${idx}`}
-          className="col-[1] bg-black/70"
+          className="col-[1] bg-[#050709]"
           style={{ gridRow: `${idx + 1} / ${idx + 2}` }}
         >
-          <div className="relative aspect-video">{id ? renderRemote(id) : <EmptyCell />}</div>
+          <div className="relative aspect-video">
+            {id ? renderRemote(id) : <EmptyCell />}
+            {id && playerNames?.[id] ? <div className="tile-label">{playerNames[id]}</div> : null}
+          </div>
         </div>
       ))}
-      {/* Host top-middle */}
-      <div className="col-[2] row-[1/3] bg-black/80">
+      <div className="col-[2] row-[1/3] bg-[#050709]">
         <div className="relative w-full h-full aspect-video">
           {renderRemote(hostIdentity)}
-          {hostLabel ? (
-            <div className="absolute bottom-1 left-1 text-xs bg-black/60 text-white px-2 py-0.5 rounded">
-              {hostLabel}
-            </div>
-          ) : null}
+          {hostLabel ? <div className="tile-label">{hostLabel}</div> : null}
         </div>
       </div>
-      {/* Screen bottom-middle */}
-      <div className="col-[2] row-[3/5] bg-black/80">
-        <div className="w-full h-full aspect-video flex items-center justify-center text-xl opacity-80">{screen || <GameScreen />}</div>
+      <div className="col-[2] row-[3/5] bg-[#050709]">
+        <div className="w-full h-full aspect-video">{screen || <GameScreen />}</div>
       </div>
-      {/* Right column */}
       {rightIds.map((id, idx) => (
         <div
           key={`R${idx}`}
-          className="col-[3] bg-black/70"
+          className="col-[3] bg-[#050709]"
           style={{ gridRow: `${idx + 1} / ${idx + 2}` }}
         >
-          <div className="relative aspect-video">{id ? renderRemote(id) : <EmptyCell />}</div>
+          <div className="relative aspect-video">
+            {id ? renderRemote(id) : <EmptyCell />}
+            {id && playerNames?.[id] ? <div className="tile-label">{playerNames[id]}</div> : null}
+          </div>
         </div>
       ))}
-
-      {/* Removed global debug/status bar to avoid confusion when alone */}
     </div>
   );
 }
@@ -240,18 +236,23 @@ function VideoRender({ track }: { track: RemoteTrack | null; fallbackLabel?: str
     }
   }, [el, track]);
   return (
-    <div className="w-full h-full">
-      {/* Mute remote videos to satisfy autoplay policies across browsers */}
+    <div className="relative w-full h-full">
       <video ref={setEl} autoPlay playsInline muted className="w-full h-full object-cover" />
       {!track && (
-        <div className="absolute inset-0 flex items-center justify-center text-sm opacity-70">Waiting for video…</div>
+        <div className="absolute inset-0 flex items-center justify-center mono text-[0.65rem] tracking-[0.16em] uppercase text-white/35">
+          Signal
+        </div>
       )}
     </div>
   );
 }
 
 function EmptyCell() {
-  return <div className="w-full h-full flex items-center justify-center text-xs opacity-40">empty</div>;
+  return (
+    <div className="w-full h-full flex items-center justify-center mono text-[0.65rem] tracking-[0.18em] uppercase text-white/25">
+      Open
+    </div>
+  );
 }
 
 

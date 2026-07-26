@@ -11,11 +11,11 @@ import BigTimer from "@/components/BigTimer";
 type PhaseKind = "idle" | "open" | "locked" | "steal_open" | "ended";
 
 const PHASE_LABEL: Record<PhaseKind, string> = {
-  idle: "Ready",
-  open: "Buzzers open",
-  locked: "Answer locked",
-  steal_open: "Steal window",
-  ended: "Match over",
+  idle: "Stand by",
+  open: "Buzzers live",
+  locked: "Locked in",
+  steal_open: "Steal",
+  ended: "Final",
 };
 
 const STORAGE_KEY = "buzzkill.host.room";
@@ -29,7 +29,7 @@ export default function HostPage() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [state, setState] = useState<any>(null);
-  const [status, setStatus] = useState<string>("");
+  const [status, setStatus] = useState("");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -55,13 +55,13 @@ export default function HostPage() {
     socket.on("host:created", onCreated);
     socket.on("room:state", setState);
     socket.on("lockout:winner", (p: { name: string; team: string }) => {
-      setStatus(`${p.name} (Team ${p.team}) locked in — grade the answer`);
+      setStatus(`${p.name} · Team ${p.team} locked`);
     });
     socket.on("steal:lockout", (p: { name: string; team: string }) => {
-      setStatus(`Steal lock: ${p.name} (Team ${p.team}) — grade the steal`);
+      setStatus(`Steal lock · ${p.name} (Team ${p.team})`);
     });
     socket.on("match:end", () => setStatus("Match complete"));
-    socket.on("match:overtime", () => setStatus("Tied — sudden death overtime"));
+    socket.on("match:overtime", () => setStatus("Tied — sudden death"));
     return () => {
       socket.off("host:created", onCreated);
       socket.off("room:state");
@@ -73,26 +73,26 @@ export default function HostPage() {
   }, []);
 
   const phase = (state?.phase?.kind || "idle") as PhaseKind;
+  const live = phase === "open" || phase === "steal_open";
   const lockedPlayer = useMemo(() => {
     if (phase !== "locked" || !state?.phase?.playerId) return null;
     return (state.players || []).find((p: any) => p.id === state.phase.playerId) || null;
   }, [phase, state]);
 
   const createRoom = () => {
-    setStatus("Creating room…");
-    getSocket().emit("host:createRoom", {}, () => setStatus("Room live — share the code"));
+    setStatus("Opening room…");
+    getSocket().emit("host:createRoom", {}, () => setStatus("Share the room code"));
   };
 
   const claimRoom = () => {
     const c = claimCode.trim().toUpperCase();
     if (!c) return;
-    setStatus("Reclaiming room…");
     getSocket().emit("host:claimRoom", { code: c }, (resp: any) => {
       if (resp?.ok) {
         setCode(resp.code);
         setStatus("Host seat reclaimed");
       } else {
-        setStatus(resp?.reason || "Could not reclaim room");
+        setStatus(resp?.reason || "Could not reclaim");
       }
     });
   };
@@ -102,266 +102,255 @@ export default function HostPage() {
     try {
       await navigator.clipboard.writeText(code);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      setTimeout(() => setCopied(false), 1400);
     } catch {
-      setStatus("Copy failed — select the code manually");
+      setStatus("Copy failed");
     }
   };
 
   const openBuzzers = () => getSocket().emit("host:openBuzzers", { code });
   const setScreen = () => {
     getSocket().emit("host:screenSet", { code, category, question, answer });
-    setStatus("Screen set — players see category/question");
+    setStatus("Board pushed");
   };
   const reveal = () => {
     getSocket().emit("host:screenReveal", { code });
     setStatus("Answer revealed");
   };
   const clearScreen = () => getSocket().emit("host:screenClear", { code });
-  const markCorrectInitial = () => getSocket().emit("host:markCorrectInitial", { code });
-  const markIncorrectInitial = () => getSocket().emit("host:markIncorrectInitial", { code });
-  const markCorrectSteal = () => getSocket().emit("host:markCorrectSteal", { code });
-  const markIncorrectSteal = () => getSocket().emit("host:markIncorrectSteal", { code });
-  const skipKill = () => getSocket().emit("host:skipKill", { code });
 
-  const playUrl =
-    typeof window !== "undefined" ? `${window.location.origin}/play` : "/play";
-
-  return (
-    <main className="p-4 sm:p-6 max-w-[1500px] mx-auto flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+  if (!code) {
+    return (
+      <main className="shell-stage px-5 py-8 max-w-xl mx-auto flex flex-col gap-8">
         <div>
-          <Link href="/" className="text-xs uppercase tracking-widest text-white/50 hover:text-white/80">
+          <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--stage-muted)]">
             BuzzKill
           </Link>
-          <h1 className="display text-4xl">Host Console</h1>
+          <h1 className="display text-6xl mt-3">Host</h1>
+          <p className="mt-3 text-[color:var(--stage-muted)] text-lg">
+            Create a room, hand out the code, run the board from one screen.
+          </p>
         </div>
-        {code ? (
-          <div className="hud-card px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2">
-            <div>
-              <div className="text-xs uppercase tracking-wider text-white/50">Room code</div>
-              <div className="display text-3xl tracking-widest text-fuchsia-300">{code}</div>
+
+        <button className="btn btn-buzz text-lg py-3" onClick={createRoom}>
+          Create room
+        </button>
+
+        <div className="strip">
+          <div className="w-full text-sm text-[color:var(--stage-muted)]">Already mid-match?</div>
+          <input
+            className="field mono tracking-[0.2em] uppercase flex-1 min-w-[12rem]"
+            placeholder="ROOM CODE"
+            value={claimCode}
+            onChange={(e) => setClaimCode(e.target.value.toUpperCase())}
+          />
+          <button className="btn btn-ghost" onClick={claimRoom} disabled={!claimCode.trim()}>
+            Reclaim host
+          </button>
+        </div>
+        {status ? <p className="text-sm text-[color:var(--live)]">{status}</p> : null}
+      </main>
+    );
+  }
+
+  return (
+    <main className="shell-stage px-4 sm:px-6 py-5 max-w-[1500px] mx-auto flex flex-col gap-5">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--stage-muted)]">
+            BuzzKill
+          </Link>
+          <h1 className="display text-5xl mt-1">Control</h1>
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <div className="mono text-[0.65rem] tracking-[0.18em] uppercase text-[color:var(--stage-muted)]">
+              Room
             </div>
-            <button className="btn-secondary" onClick={copyCode}>
-              {copied ? "Copied" : "Copy code"}
-            </button>
-            <a className="btn-secondary text-center" href={playUrl} target="_blank" rel="noreferrer">
-              Open player join
-            </a>
+            <div className="display text-4xl tracking-[0.12em] text-[color:var(--live)]">{code}</div>
           </div>
-        ) : null}
+          <button className="btn btn-ghost" onClick={copyCode}>
+            {copied ? "Copied" : "Copy code"}
+          </button>
+        </div>
+      </header>
+
+      <div className="strip">
+        <input
+          className="field"
+          placeholder="Reader name"
+          value={hostName}
+          onChange={(e) => setHostName(e.target.value)}
+        />
+        <input
+          className="field w-28"
+          placeholder="Pronouns"
+          value={hostPronouns}
+          onChange={(e) => setHostPronouns(e.target.value)}
+        />
+        <span className="phase-tag" data-live={live ? "true" : "false"}>
+          {PHASE_LABEL[phase]}
+        </span>
+        {status ? <span className="text-sm text-[color:var(--live)]">{status}</span> : null}
       </div>
 
-      {!code ? (
-        <div className="hud-card p-5 flex flex-col gap-4 max-w-xl">
-          <p className="text-white/70">
-            Create a room, share the code with players, then run questions from this console.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button className="btn-primary" onClick={createRoom}>
-              Create room
-            </button>
+      {state && (
+        <div className="board py-2">
+          <div>
+            <div className="mono text-xs tracking-[0.16em] uppercase team-a">Team A</div>
+            <div className="score team-a">{state?.scores?.A ?? 0}</div>
           </div>
-          <div className="border-t border-white/10 pt-4 flex flex-col gap-2">
-            <div className="text-sm text-white/60">Refresh mid-match? Reclaim an existing code:</div>
-            <div className="flex flex-wrap gap-2">
-              <input
-                className="border border-white/20 bg-black/30 px-3 py-2 rounded tracking-widest uppercase"
-                placeholder="ROOM CODE"
-                value={claimCode}
-                onChange={(e) => setClaimCode(e.target.value.toUpperCase())}
-              />
-              <button className="btn-secondary" onClick={claimRoom} disabled={!claimCode.trim()}>
-                Reclaim host
-              </button>
+          <div className="flex flex-col items-center gap-2">
+            <div className="mono text-sm text-[color:var(--stage-muted)]">
+              Q {Number(state?.questionIndex ?? 0) + 1}/{state?.maxQuestions ?? 20}
+              {state?.overtime ? " · OT" : ""}
             </div>
+            <BigTimer
+              deadlineAt={phase === "open" || phase === "steal_open" ? state?.phase?.deadlineAt : null}
+              label={phase === "steal_open" ? "Steal" : phase === "open" ? "Buzz" : undefined}
+              totalMs={phase === "steal_open" ? 10000 : 15000}
+            />
+          </div>
+          <div className="text-right">
+            <div className="mono text-xs tracking-[0.16em] uppercase team-b">Team B</div>
+            <div className="score team-b">{state?.scores?.B ?? 0}</div>
           </div>
         </div>
-      ) : (
-        <>
-          <div className="flex flex-wrap gap-2 items-center">
-            <input
-              className="border border-white/20 bg-black/30 px-3 py-2 rounded"
-              placeholder="Your name (READER)"
-              value={hostName}
-              onChange={(e) => setHostName(e.target.value)}
-            />
-            <input
-              className="border border-white/20 bg-black/30 px-3 py-2 rounded w-28"
-              placeholder="Pronouns"
-              value={hostPronouns}
-              onChange={(e) => setHostPronouns(e.target.value)}
-            />
-            {status ? <span className="text-sm text-amber-200/90">{status}</span> : null}
-          </div>
-
-          {state && (
-            <div className="hud-card p-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
-              <div className="text-2xl display">
-                <span className="team-a">Team A</span>{" "}
-                <span className="score-pill">{state?.scores?.A ?? 0}</span>
-                <span className="mx-2 opacity-50">•</span>
-                <span className="score-pill">{state?.scores?.B ?? 0}</span>{" "}
-                <span className="team-b">Team B</span>
-              </div>
-              <div className="text-center opacity-90">
-                Q {Number(state?.questionIndex ?? 0) + 1} / {state?.maxQuestions ?? 20}
-                <span className="ml-2 phase-pill">{PHASE_LABEL[phase] || phase}</span>
-                {state?.overtime ? <span className="ml-2 phase-pill">OT</span> : null}
-              </div>
-              <div className="flex justify-center md:justify-end">
-                <BigTimer
-                  deadlineAt={phase === "open" || phase === "steal_open" ? state?.phase?.deadlineAt : null}
-                  label={
-                    phase === "steal_open"
-                      ? "Steal"
-                      : phase === "open"
-                        ? state?.overtime
-                          ? "OT"
-                          : "Buzz"
-                        : undefined
-                  }
-                  totalMs={phase === "steal_open" ? 10000 : 15000}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Roster */}
-          {state?.players && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(["A", "B"] as const).map((t) => (
-                <div key={t} className="hud-card p-3">
-                  <div className={`font-semibold mb-2 ${t === "A" ? "team-a" : "team-b"}`}>
-                    Team {t} ({state.slots?.[t]?.length || 0}/4)
-                  </div>
-                  <div className="flex flex-col gap-1 text-sm">
-                    {(state.slots?.[t] || []).map((pid: string) => {
-                      const p = (state.players || []).find((pp: any) => pp.id === pid);
-                      if (!p) return null;
-                      const locked = lockedPlayer?.id === pid;
-                      return (
-                        <div key={pid} className={`flex justify-between ${locked ? "text-amber-300" : ""}`}>
-                          <span>
-                            {p.name}
-                            {locked ? " ← locked" : ""}
-                          </span>
-                          <span className="opacity-70">{p.buzzesRemaining} buzz</span>
-                        </div>
-                      );
-                    })}
-                    {(state.slots?.[t] || []).length === 0 ? (
-                      <span className="opacity-40 text-xs">Waiting for players…</span>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Question board */}
-          <div className="hud-card p-4 flex flex-col gap-3">
-            <div className="font-semibold">1. Set the board</div>
-            <div className="flex flex-wrap gap-2">
-              <input
-                className="border border-white/20 bg-black/30 px-3 py-2 rounded"
-                placeholder="Category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              />
-              <input
-                className="border border-white/20 bg-black/30 px-3 py-2 rounded flex-1 min-w-[220px]"
-                placeholder="Question"
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-              />
-              <input
-                className="border border-white/20 bg-black/30 px-3 py-2 rounded min-w-[160px]"
-                placeholder="Answer (hidden until reveal)"
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button className="btn-secondary" onClick={setScreen} disabled={!code || !question}>
-                Push to screen
-              </button>
-              <button className="btn-secondary" onClick={reveal} disabled={!code}>
-                Reveal answer
-              </button>
-              <button className="btn-secondary" onClick={clearScreen} disabled={!code}>
-                Clear screen
-              </button>
-            </div>
-          </div>
-
-          {/* Phase actions */}
-          <div className="hud-card p-4 flex flex-col gap-3">
-            <div className="font-semibold">2. Run the question</div>
-            {phase === "idle" && (
-              <button className="btn-primary w-fit" onClick={openBuzzers} disabled={!code}>
-                Open buzzers
-              </button>
-            )}
-            {phase === "open" && (
-              <p className="text-sm text-white/70">Buzzers are live. Waiting for first buzz…</p>
-            )}
-            {phase === "steal_open" && (
-              <p className="text-sm text-amber-200">
-                Steal open for Team {state?.phase?.team}. Waiting for a buzz…
-              </p>
-            )}
-            {phase === "locked" && (
-              <div className="flex flex-col gap-3">
-                <p className="text-sm">
-                  Locked: <strong>{lockedPlayer?.name || "Player"}</strong> (Team {lockedPlayer?.team})
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <button className="btn-primary" onClick={markCorrectInitial}>
-                    Correct → point + BuzzKill
-                  </button>
-                  <button className="btn-secondary" onClick={markIncorrectInitial}>
-                    Incorrect → steal
-                  </button>
-                  <button className="btn-secondary" onClick={markCorrectSteal}>
-                    Correct steal → point
-                  </button>
-                  <button className="btn-secondary" onClick={markIncorrectSteal}>
-                    Incorrect steal → next
-                  </button>
-                  <button className="btn-secondary" onClick={skipKill}>
-                    Skip kill / next Q
-                  </button>
-                </div>
-                <p className="text-xs text-white/45">
-                  Use initial correct/incorrect for the first buzz; steal buttons after a steal lock.
-                  “Skip kill” advances if the winner doesn’t pick a target.
-                </p>
-              </div>
-            )}
-            {phase === "ended" && (
-              <p className="text-lg text-emerald-300">
-                Final: Team A {state?.scores?.A} — Team B {state?.scores?.B}
-              </p>
-            )}
-          </div>
-
-          <StageVideoLayout
-            code={code}
-            identity={`host-${code}`}
-            hostIdentity={`host-${code}`}
-            hostLabel={
-              hostName ? `READER: ${hostName}${hostPronouns ? ` (${hostPronouns})` : ""}` : "READER"
-            }
-            leftIdentities={state?.slots?.A || []}
-            rightIdentities={state?.slots?.B || []}
-            playerNames={Object.fromEntries(
-              (state?.players || []).map((p: any) => [p.id, p.name || p.id.slice(0, 6)])
-            )}
-            screen={<GameScreen screen={state?.screen} />}
-          />
-        </>
       )}
+
+      {state?.players && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {(["A", "B"] as const).map((t) => (
+            <div key={t}>
+              <div className={`mono text-xs tracking-[0.16em] uppercase mb-2 ${t === "A" ? "team-a" : "team-b"}`}>
+                Team {t} · {(state.slots?.[t] || []).length}/4
+              </div>
+              <ul className="m-0 p-0 list-none flex flex-col gap-2">
+                {(state.slots?.[t] || []).map((pid: string) => {
+                  const p = (state.players || []).find((pp: any) => pp.id === pid);
+                  if (!p) return null;
+                  const locked = lockedPlayer?.id === pid;
+                  return (
+                    <li
+                      key={pid}
+                      className="flex items-center justify-between text-sm border-b border-[color:var(--stage-line)] pb-2"
+                    >
+                      <span className={locked ? "text-[color:var(--live)]" : ""}>
+                        {p.name}
+                        {locked ? " · locked" : ""}
+                      </span>
+                      <span className="buzz-dots" aria-label={`${p.buzzesRemaining} buzzes`}>
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <span key={i} className={`dot ${i < (p.buzzesRemaining ?? 0) ? "on" : ""}`} />
+                        ))}
+                      </span>
+                    </li>
+                  );
+                })}
+                {(state.slots?.[t] || []).length === 0 ? (
+                  <li className="text-xs text-[color:var(--stage-muted)]">Waiting for players</li>
+                ) : null}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <section className="flex flex-col gap-3">
+        <h2 className="display text-2xl m-0">Board</h2>
+        <div className="flex flex-wrap gap-2">
+          <input
+            className="field"
+            placeholder="Category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          />
+          <input
+            className="field flex-1 min-w-[14rem]"
+            placeholder="Question"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+          />
+          <input
+            className="field min-w-[10rem]"
+            placeholder="Answer"
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn btn-ink" onClick={setScreen} disabled={!question}>
+            Push board
+          </button>
+          <button className="btn btn-ghost" onClick={reveal}>
+            Reveal
+          </button>
+          <button className="btn btn-ghost" onClick={clearScreen}>
+            Clear
+          </button>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="display text-2xl m-0">Call</h2>
+        {phase === "idle" && (
+          <button className="btn btn-live w-fit text-lg" onClick={openBuzzers}>
+            Open buzzers
+          </button>
+        )}
+        {phase === "open" && (
+          <p className="m-0 text-[color:var(--stage-muted)]">Listening for the first buzz…</p>
+        )}
+        {phase === "steal_open" && (
+          <p className="m-0 text-[color:var(--live)]">
+            Steal open for Team {state?.phase?.team}
+          </p>
+        )}
+        {phase === "locked" && (
+          <div className="flex flex-col gap-3">
+            <p className="m-0">
+              Locked: <strong>{lockedPlayer?.name || "Player"}</strong> · Team {lockedPlayer?.team}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button className="btn btn-ok" onClick={() => getSocket().emit("host:markCorrectInitial", { code })}>
+                Correct · BuzzKill
+              </button>
+              <button className="btn btn-ghost" onClick={() => getSocket().emit("host:markIncorrectInitial", { code })}>
+                Miss · Steal
+              </button>
+              <button className="btn btn-ok" onClick={() => getSocket().emit("host:markCorrectSteal", { code })}>
+                Steal correct
+              </button>
+              <button className="btn btn-ghost" onClick={() => getSocket().emit("host:markIncorrectSteal", { code })}>
+                Steal miss
+              </button>
+              <button className="btn btn-warn" onClick={() => getSocket().emit("host:skipKill", { code })}>
+                Skip kill
+              </button>
+            </div>
+          </div>
+        )}
+        {phase === "ended" && (
+          <p className="display text-3xl m-0">
+            <span className="team-a">{state?.scores?.A}</span>
+            <span className="mx-3 opacity-40">—</span>
+            <span className="team-b">{state?.scores?.B}</span>
+          </p>
+        )}
+      </section>
+
+      <StageVideoLayout
+        code={code}
+        identity={`host-${code}`}
+        hostIdentity={`host-${code}`}
+        hostLabel={hostName ? `Reader · ${hostName}${hostPronouns ? ` (${hostPronouns})` : ""}` : "Reader"}
+        leftIdentities={state?.slots?.A || []}
+        rightIdentities={state?.slots?.B || []}
+        playerNames={Object.fromEntries(
+          (state?.players || []).map((p: any) => [p.id, p.name || p.id.slice(0, 6)])
+        )}
+        screen={<GameScreen screen={state?.screen} />}
+      />
     </main>
   );
 }

@@ -14,10 +14,10 @@ type PhaseKind = "idle" | "open" | "locked" | "steal_open" | "ended";
 const STORAGE_KEY = "buzzkill.player.session";
 
 const PHASE_HINT: Record<PhaseKind, string> = {
-  idle: "Wait for the host to open buzzers",
-  open: "Buzzers are open — hit BUZZ!",
-  locked: "Someone locked in — listen for the host",
-  steal_open: "Steal window — opposing team can buzz",
+  idle: "Hold for the host",
+  open: "Hit the pad",
+  locked: "Board is locked",
+  steal_open: "Steal window",
   ended: "Match over",
 };
 
@@ -53,41 +53,41 @@ export default function PlayPage() {
     socket.on("kill:promptTargets", (p: { eligible: string[]; playerId?: string }) => {
       if (p.playerId && playerId && p.playerId !== playerId) return;
       setEligibleTargets(p.eligible || []);
-      setBanner("You scored — pick an opponent to BuzzKill");
+      setBanner("Pick who to BuzzKill");
     });
     socket.on("kill:applied", () => {
       setEligibleTargets([]);
-      setBanner("BuzzKill applied");
+      setBanner("BuzzKill landed");
     });
     socket.on("question:opened", (p: { deadlineAt: number }) => {
       setTimerLabel("Buzz");
       setDeadlineAt(p.deadlineAt);
-      setBanner("Buzzers open!");
+      setBanner("Buzzers live");
       setEligibleTargets([]);
     });
     socket.on("steal:opened", (p: { team: TeamId; deadlineAt: number }) => {
       setTimerLabel("Steal");
       setDeadlineAt(p.deadlineAt);
-      setBanner(`Steal open for Team ${p.team}`);
+      setBanner(`Steal · Team ${p.team}`);
     });
     socket.on("question:timeout", () => {
       setDeadlineAt(null);
-      setBanner("Time — no buzz");
+      setBanner("Time");
     });
     socket.on("steal:timeout", () => {
       setDeadlineAt(null);
-      setBanner("Steal timed out");
+      setBanner("Steal expired");
     });
     socket.on("lockout:winner", (p: { playerId: string; name: string }) => {
       setDeadlineAt(null);
-      setBanner(p.playerId === playerId ? "You locked in!" : `${p.name} locked in`);
+      setBanner(p.playerId === playerId ? "You locked it" : `${p.name} locked`);
     });
     socket.on("steal:lockout", (p: { playerId: string; name: string }) => {
       setDeadlineAt(null);
-      setBanner(p.playerId === playerId ? "You stole the lock!" : `${p.name} stole the lock`);
+      setBanner(p.playerId === playerId ? "You stole it" : `${p.name} stole`);
     });
-    socket.on("match:end", () => setBanner("Match complete"));
-    socket.on("match:overtime", () => setBanner("Sudden death overtime"));
+    socket.on("match:end", () => setBanner("Final"));
+    socket.on("match:overtime", () => setBanner("Sudden death"));
     return () => {
       socket.off("room:state");
       socket.off("kill:promptTargets");
@@ -103,21 +103,16 @@ export default function PlayPage() {
     };
   }, [playerId]);
 
-  // Auto-rejoin after refresh if we still have a seat
   useEffect(() => {
     if (!playerId || !code || !name) return;
     const socket = getSocket();
     const tryRejoin = () => {
-      socket.emit(
-        "player:joinRoom",
-        { code, team, name, playerId },
-        (resp: any) => {
-          if (resp?.ok) {
-            setPlayerId(resp.playerId);
-            setJoinError("");
-          }
+      socket.emit("player:joinRoom", { code, team, name, playerId }, (resp: any) => {
+        if (resp?.ok) {
+          setPlayerId(resp.playerId);
+          setJoinError("");
         }
-      );
+      });
     };
     if (socket.connected) tryRejoin();
     socket.on("connect", tryRejoin);
@@ -130,7 +125,6 @@ export default function PlayPage() {
     () => (state?.players || []).find((p: any) => p.id === playerId) || null,
     [state, playerId]
   );
-
   const phase = (state?.phase?.kind || "idle") as PhaseKind;
   const canBuzz = useMemo(() => {
     if (!playerId || !me?.slotted) return false;
@@ -158,7 +152,7 @@ export default function PlayPage() {
     setJoinError("");
     const room = code.trim().toUpperCase();
     if (!room || !name.trim()) {
-      setJoinError("Enter room code and your name");
+      setJoinError("Need a room code and your name");
       return;
     }
     getSocket().emit(
@@ -169,58 +163,56 @@ export default function PlayPage() {
           setCode(room);
           setPlayerId(resp.playerId);
           persist({ code: room, name: name.trim(), team, playerId: resp.playerId });
-          setBanner(resp.rejoined ? "Rejoined match" : "You're in — wait for the host");
+          setBanner(resp.rejoined ? "Back in" : "You're seated");
         } else {
-          setJoinError(resp?.reason || "Could not join");
+          setJoinError(resp?.reason || "Join failed");
         }
       }
     );
   };
 
-  const buzz = () => {
-    if (!canBuzz) return;
-    getSocket().emit("player:buzz", { code });
-  };
-
-  const kill = (targetId: string) => {
-    getSocket().emit("player:assignKillTarget", { code, targetId });
-    setEligibleTargets([]);
-  };
-
   if (!playerId) {
     return (
-      <main className="p-6 max-w-lg mx-auto flex flex-col gap-5">
+      <main className="shell-light px-5 py-10 max-w-md mx-auto flex flex-col gap-8">
         <div>
-          <Link href="/" className="text-xs uppercase tracking-widest text-white/50 hover:text-white/80">
+          <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--muted)]">
             BuzzKill
           </Link>
-          <h1 className="display text-5xl mt-1">Join match</h1>
-          <p className="text-white/65 mt-2">Enter the room code from your host.</p>
+          <h1 className="display text-6xl mt-3">Join</h1>
+          <p className="mt-3 text-[color:var(--muted)] text-lg">Enter the code your host just shouted.</p>
         </div>
-        <div className="hud-card p-5 flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
           <input
-            className="border border-white/20 bg-black/30 px-3 py-3 rounded tracking-widest uppercase text-lg"
+            className="field mono tracking-[0.22em] uppercase text-lg"
             placeholder="ROOM CODE"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
           />
           <input
-            className="border border-white/20 bg-black/30 px-3 py-3 rounded"
+            className="field"
             placeholder="Your name"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <select
-            className="border border-white/20 bg-black/30 px-3 py-3 rounded"
-            value={team}
-            onChange={(e) => setTeam(e.target.value as TeamId)}
-          >
-            <option value="A">Team A</option>
-            <option value="B">Team B</option>
-          </select>
-          {joinError ? <p className="text-sm text-red-300">{joinError}</p> : null}
-          <button className="btn-primary text-lg py-3" onClick={join}>
-            Join game
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className={`btn ${team === "A" ? "btn-ink" : "btn-ghost"}`}
+              onClick={() => setTeam("A")}
+            >
+              Team A
+            </button>
+            <button
+              type="button"
+              className={`btn ${team === "B" ? "btn-ink" : "btn-ghost"}`}
+              onClick={() => setTeam("B")}
+            >
+              Team B
+            </button>
+          </div>
+          {joinError ? <p className="m-0 text-sm text-[color:var(--buzz)]">{joinError}</p> : null}
+          <button className="btn btn-buzz text-lg py-3" onClick={join}>
+            Enter arena
           </button>
         </div>
       </main>
@@ -228,74 +220,85 @@ export default function PlayPage() {
   }
 
   return (
-    <main className="p-4 sm:p-6 max-w-[1500px] mx-auto flex flex-col gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <main className="shell-stage px-4 sm:px-6 py-5 max-w-[1500px] mx-auto flex flex-col gap-5">
+      <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/" className="text-xs uppercase tracking-widest text-white/50 hover:text-white/80">
+          <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--stage-muted)]">
             BuzzKill
           </Link>
-          <h1 className="display text-4xl">
-            {me?.name || name}{" "}
-            <span className={me?.team === "B" ? "team-b" : "team-a"}>Team {me?.team || team}</span>
+          <h1 className="display text-4xl mt-1">
+            {me?.name || name}
           </h1>
-          <p className="text-sm text-white/55">
-            Room <span className="tracking-widest text-white/80">{code}</span>
-            {me ? ` · ${me.buzzesRemaining} buzzes left` : ""}
-            {me && !me.slotted ? " · spectator (team full)" : ""}
+          <p className="m-0 mt-1 text-sm text-[color:var(--stage-muted)]">
+            <span className={me?.team === "B" ? "team-b" : "team-a"}>Team {me?.team || team}</span>
+            <span className="mx-2 opacity-40">·</span>
+            <span className="mono tracking-[0.14em]">{code}</span>
+            {me ? (
+              <>
+                <span className="mx-2 opacity-40">·</span>
+                {me.buzzesRemaining} buzzes
+              </>
+            ) : null}
+            {me && !me.slotted ? " · sideline" : null}
           </p>
         </div>
-        {deadlineAt ? (
-          <BigTimer
-            deadlineAt={deadlineAt}
-            label={timerLabel}
-            totalMs={timerLabel === "Steal" ? 10000 : 15000}
-          />
-        ) : null}
-      </div>
+        <BigTimer
+          deadlineAt={deadlineAt}
+          label={timerLabel}
+          totalMs={timerLabel === "Steal" ? 10000 : 15000}
+        />
+      </header>
 
       {state && (
-        <div className="hud-card p-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
-          <div className="text-2xl display">
-            <span className="team-a">A</span> <span className="score-pill">{state?.scores?.A ?? 0}</span>
-            <span className="mx-2 opacity-50">•</span>
-            <span className="score-pill">{state?.scores?.B ?? 0}</span> <span className="team-b">B</span>
+        <div className="board">
+          <div>
+            <div className="mono text-xs tracking-[0.16em] uppercase team-a">A</div>
+            <div className="score team-a">{state?.scores?.A ?? 0}</div>
           </div>
-          <div className="text-center text-sm md:text-base opacity-90">
-            Q {Number(state?.questionIndex ?? 0) + 1}/{state?.maxQuestions ?? 20}
-            {state?.overtime ? <span className="ml-2 phase-pill">OT</span> : null}
+          <div className="text-center">
+            <div className="phase-tag" data-live={phase === "open" || phase === "steal_open" ? "true" : "false"}>
+              {banner || PHASE_HINT[phase]}
+            </div>
+            <div className="mono text-xs mt-2 text-[color:var(--stage-muted)]">
+              Q {Number(state?.questionIndex ?? 0) + 1}/{state?.maxQuestions ?? 20}
+              {state?.overtime ? " · OT" : ""}
+            </div>
           </div>
-          <div className="text-center md:text-right text-sm text-amber-100/90">
-            {banner || PHASE_HINT[phase]}
+          <div className="text-right">
+            <div className="mono text-xs tracking-[0.16em] uppercase team-b">B</div>
+            <div className="score team-b">{state?.scores?.B ?? 0}</div>
           </div>
         </div>
       )}
 
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-col items-center gap-3 py-2">
         <button
-          className={`w-full max-w-md py-6 rounded-xl text-3xl font-black tracking-wide transition ${
-            canBuzz
-              ? "bg-gradient-to-r from-fuchsia-600 to-indigo-600 shadow-[0_0_40px_rgba(192,38,211,0.45)] scale-100"
-              : "bg-white/10 text-white/35 cursor-not-allowed"
-          }`}
-          onClick={buzz}
+          className="buzz-pad"
+          data-ready={canBuzz ? "true" : "false"}
+          onClick={() => canBuzz && getSocket().emit("player:buzz", { code })}
           disabled={!canBuzz}
         >
           BUZZ
         </button>
-        {!canBuzz && me?.slotted ? (
-          <p className="text-xs text-white/45">{PHASE_HINT[phase]}</p>
+        {!canBuzz ? (
+          <p className="m-0 text-xs tracking-[0.14em] uppercase text-[color:var(--stage-muted)]">
+            {PHASE_HINT[phase]}
+          </p>
         ) : null}
       </div>
 
       {eligibleTargets.length > 0 && !state?.overtime && (
-        <div className="hud-card p-4 flex flex-col gap-3 border border-red-400/40">
-          <div className="font-semibold text-red-200">BuzzKill — choose an opponent</div>
+        <div className="flex flex-col gap-3 border-y border-[color:var(--buzz)] py-4">
+          <div className="display text-2xl text-[color:var(--buzz)]">BuzzKill</div>
           <div className="flex flex-wrap gap-2">
             {eligibleTargets.map((pid) => (
               <button
                 key={pid}
-                className="px-4 py-3 rounded bg-red-600 hover:bg-red-500 text-white font-semibold"
-                onClick={() => kill(pid)}
+                className="btn btn-buzz"
+                onClick={() => {
+                  getSocket().emit("player:assignKillTarget", { code, targetId: pid });
+                  setEligibleTargets([]);
+                }}
               >
                 {playerNameById.get(pid) ?? pid.slice(0, 6)}
               </button>
@@ -317,30 +320,31 @@ export default function PlayPage() {
       />
 
       {state?.players && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-6">
           {(["A", "B"] as const).map((t) => (
-            <div key={t} className="hud-card p-2">
-              <div className={`font-semibold mb-1 ${t === "A" ? "team-a" : "team-b"}`}>Team {t}</div>
-              <div className="flex flex-col gap-1">
+            <div key={t}>
+              <div className={`mono text-xs tracking-[0.16em] uppercase mb-2 ${t === "A" ? "team-a" : "team-b"}`}>
+                Team {t}
+              </div>
+              <ul className="m-0 p-0 list-none flex flex-col gap-2">
                 {(state.slots?.[t] || []).map((pid: string) => {
                   const p = (state.players || []).find((pp: any) => pp.id === pid);
                   if (!p) return null;
-                  const isMe = p.id === playerId;
                   return (
-                    <div key={pid} className="flex items-center justify-between text-sm">
+                    <li key={pid} className="flex items-center justify-between text-sm">
                       <span>
                         {p.name}
-                        {isMe ? " (you)" : ""}
+                        {p.id === playerId ? " · you" : ""}
                       </span>
-                      <div className="buzz-dots">
+                      <span className="buzz-dots">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <span key={i} className={`dot ${i < (p.buzzesRemaining ?? 0) ? "on" : ""}`} />
                         ))}
-                      </div>
-                    </div>
+                      </span>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             </div>
           ))}
         </div>

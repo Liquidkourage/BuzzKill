@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Bebas_Neue } from "next/font/google";
+import { Syne, Figtree, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const syne = Syne({
+  variable: "--font-syne",
   subsets: ["latin"],
+  weight: ["700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const figtree = Figtree({
+  variable: "--font-figtree",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const display = Bebas_Neue({
-  variable: "--font-display",
-  weight: "400",
+const ibm = IBM_Plex_Mono({
+  variable: "--font-ibm",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -30,9 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${display.variable} antialiased bg-gradient-to-br from-[#070a14] via-[#0a0f25] to-[#05060b] text-white min-h-screen game-bg`}
-      >
+      <body className={`${syne.variable} ${figtree.variable} ${ibm.variable} antialiased`}>
         {children}
       </body>
     </html>
