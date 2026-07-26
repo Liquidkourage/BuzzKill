@@ -1,30 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getSocket } from "@/lib/socket";
 
 export default function Home() {
-  const [socketId, setSocketId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const socket = getSocket();
-    const onConnected = (payload: { socketId: string }) => setSocketId(payload.socketId);
-    socket.on("connected", onConnected);
-    return () => {
-      socket.off("connected", onConnected);
-    };
-  }, []);
-
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8 gap-6">
-      <h1 className="text-3xl font-bold">BuzzKill</h1>
-      <p className="opacity-80">Web app scaffold is running.</p>
-      <p className="text-sm opacity-70">Socket: {socketId ?? "connecting..."}</p>
-      <div className="flex gap-3">
-        <a className="btn-secondary" href="/host">Host</a>
-        <a className="btn-secondary" href="/play">Play</a>
-        <Link className="btn-secondary" href="/admin/matches">Admin</Link>
+    <main className="relative min-h-screen flex flex-col items-center justify-center px-6 py-16 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[720px] h-[720px] rounded-full bg-[radial-gradient(circle,rgba(192,38,211,0.22),transparent_60%)] blur-2xl" />
+        <div className="absolute bottom-0 right-0 w-[480px] h-[480px] rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.18),transparent_60%)] blur-2xl" />
+      </div>
+
+      <div className="relative z-10 max-w-xl w-full text-center flex flex-col gap-8">
+        <div className="flex flex-col gap-3">
+          <p className="text-sm uppercase tracking-[0.35em] text-fuchsia-300/80">Live trivia showdown</p>
+          <h1 className="display text-7xl sm:text-8xl leading-none neon neon-pink" data-text="BuzzKill">
+            BuzzKill
+          </h1>
+          <p className="text-lg text-white/75 max-w-md mx-auto">
+            Two teams. Limited buzzers. Steal or get BuzzKilled. Host a match in the browser — video included.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link href="/host" className="btn-primary text-lg px-8 py-3">
+            Host a match
+          </Link>
+          <Link href="/play" className="btn-secondary text-lg px-8 py-3">
+            Join as player
+          </Link>
+        </div>
+
+        <p className="text-xs text-white/40">
+          <Link href="/admin/matches" className="underline underline-offset-2 hover:text-white/70">
+            Match history
+          </Link>
+        </p>
       </div>
     </main>
   );

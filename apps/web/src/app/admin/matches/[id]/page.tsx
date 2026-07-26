@@ -37,8 +37,13 @@ function formatDate(iso?: string) {
 	try { return new Date(iso).toLocaleString(); } catch { return iso; }
 }
 
-export default async function AdminMatchDetailPage({ params }: { params: { id: string } }) {
-	const { match, error } = await fetchMatch(params.id);
+export default async function AdminMatchDetailPage({
+	params,
+}: {
+	params: Promise<{ id: string }>;
+}) {
+	const { id } = await params;
+	const { match, error } = await fetchMatch(id);
 	return (
 		<main className="p-6 max-w-4xl mx-auto flex flex-col gap-4">
 			<div className="flex items-center justify-between">

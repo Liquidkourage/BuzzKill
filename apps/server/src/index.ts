@@ -1,6 +1,16 @@
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
+import { AccessToken } from "livekit-server-sdk";
+import "./env"; // load env before anything else that reads process.env
+import {
+  envCandidates,
+  loadedEnvFiles,
+  livekitConfigured,
+  livekitHost,
+  logDbError,
+  databaseInfo,
+} from "./env";
 // Redis adapter (optional)
 let createAdapter: any = null;
 let createRedisClient: any = null;
@@ -11,27 +21,9 @@ try {
   createRedisClient = require("redis").createClient;
 } catch {}
 import cors from "cors";
-import dotenv from "dotenv";
-import path from "path";
 import fs from "fs";
 import { randomUUID } from "crypto";
 import { prisma } from "./db";
-
-// Load env from multiple candidate locations to be robust across npm workspaces
-const envCandidates = [
-  path.resolve(__dirname, "../.env"),
-  path.resolve(process.cwd(), "apps/server/.env"),
-  path.resolve(process.cwd(), ".env"),
-];
-
-// Load default first
-dotenv.config();
-// Then load candidates in order, overriding previous values
-for (const p of envCandidates) {
-  if (fs.existsSync(p)) {
-    dotenv.config({ path: p, override: true });
-  }
-}
 
 type TeamId = "A" | "B";
 
@@ -96,8 +88,27 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cors({ origin: "*" }));
-app.get("/health", (_req, res) => {
-  res.json({ ok: true });
+
+// Health: liveness + optional DB/LiveKit readiness (no secrets)
+app.get("/health", async (_req, res) => {
+  const dbMeta = databaseInfo();
+  let database: "connected" | "disconnected" = "disconnected";
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    database = "connected";
+  } catch {
+    database = "disconnected";
+  }
+  const livekit = livekitConfigured();
+  const healthy = database === "connected";
+  res.status(healthy ? 200 : 503).json({
+    ok: healthy,
+    status: healthy ? "healthy" : "unhealthy",
+    timestamp: new Date().toISOString(),
+    database,
+    db: dbMeta,
+    livekit: { configured: livekit, host: livekitHost() },
+  });
 });
 
 // Admin: list recent matches
@@ -143,64 +154,37 @@ app.get("/admin/matches/:id", async (req, res) => {
 app.get("/livekit/debug", (_req, res) => {
   const checked = envCandidates.map((p) => ({ path: p, exists: fs.existsSync(p) }));
   res.json({
+    configured: livekitConfigured(),
+    host: livekitHost(),
     hasUrl: Boolean(process.env.LIVEKIT_URL),
     hasKey: Boolean(process.env.LIVEKIT_API_KEY),
     hasSecret: Boolean(process.env.LIVEKIT_API_SECRET),
     cwd: process.cwd(),
-    __dirname,
+    loadedEnvFiles,
     checked,
   });
 });
 
-// LiveKit token endpoint
-// Health check endpoint
-app.get("/health", async (req, res) => {
-  try {
-    // Test database connection
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      database: "connected"
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: "unhealthy",
-      timestamp: new Date().toISOString(),
-      database: "disconnected",
-      error: error instanceof Error ? error.message : "Unknown error"
-    });
-  }
-});
-
-// Test endpoint to verify server is running
-app.get("/test", (req, res) => {
-  res.json({ message: "Server is running!", timestamp: new Date().toISOString() });
-});
-
 app.get("/livekit/token", async (req, res) => {
   try {
-    const room = String(req.query.code || "");
-    const identity = String(req.query.identity || "");
+    const room = String(req.query.code || "").trim();
+    const identity = String(req.query.identity || "").trim();
     if (!room || !identity) {
       return res.status(400).json({ error: "Missing code or identity" });
     }
-    
+
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
     const livekitUrl = process.env.LIVEKIT_URL;
-    
-    // For development, use mock tokens if LiveKit not fully configured
+
     if (!apiKey || !apiSecret || !livekitUrl) {
-      const mockToken = `mock-token-${room}-${identity}-${Date.now()}`;
-      const mockUrl = "ws://localhost:7880";
-      return res.json({ token: mockToken, url: mockUrl });
+      return res.status(503).json({
+        error: "LiveKit not configured",
+        hint: "Set LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET in the repo root .env or apps/server/.env",
+      });
     }
-    
-    // Real LiveKit token generation
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { AccessToken } = require("livekit-server-sdk");
-    const at = new AccessToken(apiKey, apiSecret, { identity });
+
+    const at = new AccessToken(apiKey, apiSecret, { identity, ttl: "2h" });
     at.addGrant({
       room,
       roomJoin: true,
@@ -299,18 +283,40 @@ function publishState(state: RoomState) {
   });
 }
 
+function normalizeCode(code: string): string {
+  return String(code || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "");
+}
+
+function getRoom(code: string): RoomState | undefined {
+  return rooms.get(normalizeCode(code));
+}
+
+function isHost(socketId: string, state: RoomState): boolean {
+  return state.hostSocketId === socketId;
+}
+
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
   console.log("Socket transport:", socket.conn.transport.name);
   socket.emit("connected", { socketId: socket.id });
 
   socket.on("disconnect", () => {
-    // Cleanup mapping if player disconnects
+    // Keep player/host seats; only clear live socket bindings so they can rejoin.
     for (const state of rooms.values()) {
-      if (state.hostSocketId === socket.id) continue;
+      if (state.hostSocketId === socket.id) {
+        // Host seat stays claimable via host:claimRoom
+        continue;
+      }
       const playerId = state.socketsToPlayers[socket.id];
       if (playerId) {
         delete state.socketsToPlayers[socket.id];
+        const player = state.players[playerId];
+        if (player && player.socketId === socket.id) {
+          player.socketId = "";
+        }
       }
     }
   });
@@ -344,32 +350,69 @@ io.on("connection", (socket) => {
         state.matchId = m.id;
         return prisma.matchEvent.create({ data: { matchId: m.id, type: "room_created", payload: { code } } });
       })
-      .catch(() => {});
+      .catch((err) => logDbError("match.create", err));
   });
 
-  // Player joins a room
+  // Host reclaims an existing room after refresh/disconnect
+  socket.on(
+    "host:claimRoom",
+    (
+      payload: { code: string },
+      ack?: (resp: { ok: boolean; code?: string; reason?: string }) => void
+    ) => {
+      const code = normalizeCode(payload?.code);
+      const state = getRoom(code);
+      if (!state) return ack?.({ ok: false, reason: "Room not found" });
+      if (state.phase.kind === "ended") return ack?.({ ok: false, reason: "Match already ended" });
+      state.hostSocketId = socket.id;
+      socket.join(state.code);
+      ack?.({ ok: true, code: state.code });
+      socket.emit("host:created", { code: state.code });
+      publishState(state);
+    }
+  );
+
+  // Player joins or rejoins a room
   socket.on(
     "player:joinRoom",
     (
-      payload: { code: string; team: TeamId; name: string },
-      ack?: (resp: { ok: boolean; playerId?: string; reason?: string }) => void
+      payload: { code: string; team: TeamId; name: string; playerId?: string },
+      ack?: (resp: { ok: boolean; playerId?: string; reason?: string; rejoined?: boolean }) => void
     ) => {
-      const state = rooms.get(payload.code);
+      const code = normalizeCode(payload.code);
+      const state = getRoom(code);
       if (!state) return ack?.({ ok: false, reason: "Room not found" });
+      if (state.phase.kind === "ended") return ack?.({ ok: false, reason: "Match already ended" });
+
+      // Rejoin existing seat
+      if (payload.playerId && state.players[payload.playerId]) {
+        const existing = state.players[payload.playerId];
+        if (existing.socketId && state.socketsToPlayers[existing.socketId] === existing.id) {
+          delete state.socketsToPlayers[existing.socketId];
+        }
+        existing.socketId = socket.id;
+        if (payload.name?.trim()) existing.name = payload.name.trim();
+        state.socketsToPlayers[socket.id] = existing.id;
+        socket.join(state.code);
+        publishState(state);
+        return ack?.({ ok: true, playerId: existing.id, rejoined: true });
+      }
+
+      const team: TeamId = payload.team === "B" ? "B" : "A";
       socket.join(state.code);
       const playerId = randomUUID();
-      const alreadySlotted = state.slots[payload.team].length < MAX_SLOTTED_PER_TEAM;
+      const alreadySlotted = state.slots[team].length < MAX_SLOTTED_PER_TEAM;
       const player: Player = {
         id: playerId,
         socketId: socket.id,
-        name: payload.name || "Player",
-        team: payload.team,
+        name: payload.name?.trim() || "Player",
+        team,
         buzzesRemaining: INITIAL_BUZZES_PER_PLAYER,
         slotted: alreadySlotted,
       };
       state.players[playerId] = player;
       state.socketsToPlayers[socket.id] = playerId;
-      if (alreadySlotted) state.slots[payload.team].push(playerId);
+      if (alreadySlotted) state.slots[team].push(playerId);
       publishState(state);
       ack?.({ ok: true, playerId });
     }
@@ -377,7 +420,7 @@ io.on("connection", (socket) => {
 
   // Client ping -> server pong: record RTT in room state by player
   socket.on("client:ping", ({ code, sentAt }: { code: string; sentAt: number }) => {
-    const state = rooms.get(code);
+    const state = getRoom(code);
     if (!state) return;
     const playerId = state.socketsToPlayers[socket.id];
     if (!playerId) return; // ignore host pings for now
@@ -395,7 +438,7 @@ io.on("connection", (socket) => {
         state.phase = { kind: "idle" };
         publishState(state);
         io.to(state.code).emit("match:overtime", {});
-        if (state.matchId) prisma.match.update({ where: { id: state.matchId }, data: { overtime: true } }).catch(() => {});
+        if (state.matchId) prisma.match.update({ where: { id: state.matchId }, data: { overtime: true } }).catch((err) => logDbError("persist", err));
         return;
       } else {
         state.phase = { kind: "ended" };
@@ -404,7 +447,7 @@ io.on("connection", (socket) => {
         if (state.matchId)
           prisma.match
             .update({ where: { id: state.matchId }, data: { status: "completed", scoreA: state.scores.A, scoreB: state.scores.B } })
-            .catch(() => {});
+            .catch((err) => logDbError("persist", err));
         return;
       }
     }
@@ -414,7 +457,7 @@ io.on("connection", (socket) => {
 
   // Host opens buzzers for a new question (works for regulation and OT)
   socket.on("host:openBuzzers", ({ code }: { code: string }) => {
-    const state = rooms.get(code);
+    const state = getRoom(code);
     if (!state || state.hostSocketId !== socket.id) return;
     if (!state.overtime && state.questionIndex >= state.maxQuestions) return;
     state.phase = { kind: "open", deadlineAt: Date.now() + QUESTION_TIME_MS };
@@ -423,7 +466,7 @@ io.on("connection", (socket) => {
 
     // Set timeout for no-buzz case
     setTimeout(() => {
-      const current = rooms.get(code);
+      const current = getRoom(code);
       if (!current) return;
       if (current.phase.kind !== "open") return; // someone locked in
       if (current.overtime) {
@@ -444,7 +487,7 @@ io.on("connection", (socket) => {
   socket.on(
     "host:screenSet",
     ({ code, category, question, answer }: { code: string; category?: string; question?: string; answer?: string }) => {
-      const state = rooms.get(code);
+      const state = getRoom(code);
       if (!state || state.hostSocketId !== socket.id) return;
       state.screen = { category, question, answer, revealed: false };
       publishState(state);
@@ -453,7 +496,7 @@ io.on("connection", (socket) => {
 
   // Host reveals the answer
   socket.on("host:screenReveal", ({ code }: { code: string }) => {
-    const state = rooms.get(code);
+    const state = getRoom(code);
     if (!state || state.hostSocketId !== socket.id) return;
     if (!state.screen) return;
     state.screen.revealed = true;
@@ -462,7 +505,7 @@ io.on("connection", (socket) => {
 
   // Host clears the screen
   socket.on("host:screenClear", ({ code }: { code: string }) => {
-    const state = rooms.get(code);
+    const state = getRoom(code);
     if (!state || state.hostSocketId !== socket.id) return;
     state.screen = undefined;
     publishState(state);
@@ -470,7 +513,7 @@ io.on("connection", (socket) => {
 
   // Player attempts to buzz
   socket.on("player:buzz", ({ code }: { code: string }) => {
-    const state = rooms.get(code);
+    const state = getRoom(code);
     if (!state) return;
     const playerId = state.socketsToPlayers[socket.id];
     if (!playerId) return;
@@ -486,7 +529,7 @@ io.on("connection", (socket) => {
       if (state.matchId)
         prisma.matchEvent
           .create({ data: { matchId: state.matchId, type: "lock", payload: { playerId, team: player.team } } })
-          .catch(() => {});
+          .catch((err) => logDbError("persist", err));
       // Await host grading
     } else if (state.phase.kind === "steal_open") {
       // Only opposing team to initial team can buzz in steal
@@ -498,13 +541,13 @@ io.on("connection", (socket) => {
       if (state.matchId)
         prisma.matchEvent
           .create({ data: { matchId: state.matchId, type: "steal_lock", payload: { playerId, team: player.team } } })
-          .catch(() => {});
+          .catch((err) => logDbError("persist", err));
     }
   });
 
   // Host grades the current locked answer
   socket.on("host:grade", ({ code, correct }: { code: string; correct: boolean }) => {
-    const state = rooms.get(code);
+    const state = getRoom(code);
     if (!state || state.hostSocketId !== socket.id) return;
     if (state.phase.kind !== "locked") return;
     const answererId = state.phase.playerId;
@@ -538,33 +581,45 @@ io.on("connection", (socket) => {
   // - host:markIncorrectSteal (ends question)
 
   socket.on("host:markCorrectInitial", ({ code }: { code: string }) => {
-    const state = rooms.get(code);
+    const state = getRoom(code);
     if (!state || state.hostSocketId !== socket.id) return;
     if (state.phase.kind !== "locked") return;
     const answerer = state.players[state.phase.playerId];
     if (!answerer) return;
     state.scores[answerer.team] += 1;
     if (state.matchId)
-      prisma.match.update({ where: { id: state.matchId }, data: { scoreA: state.scores.A, scoreB: state.scores.B } }).catch(() => {});
+      prisma.match.update({ where: { id: state.matchId }, data: { scoreA: state.scores.A, scoreB: state.scores.B } }).catch((err) => logDbError("persist", err));
     if (state.matchId)
       prisma.matchEvent
         .create({ data: { matchId: state.matchId, type: "correct_initial", payload: { playerId: answerer.id, team: answerer.team } } })
-        .catch(() => {});
+        .catch((err) => logDbError("persist", err));
     if (state.overtime) {
       // Sudden death: correct answer ends the match, no kill
       state.phase = { kind: "ended" };
       publishState(state);
       io.to(state.code).emit("match:end", { scores: state.scores });
     } else {
-      // Prompt kill targets to the answerer only
       const eligible = getEligibleTargets(state, answerer.team);
-      io.to(answerer.socketId).emit("kill:promptTargets", { eligible });
-      publishState(state);
+      if (eligible.length === 0) {
+        advanceAfterQuestion(state);
+      } else {
+        // Broadcast so rejoined answerers still receive the prompt
+        io.to(state.code).emit("kill:promptTargets", { eligible, playerId: answerer.id });
+        publishState(state);
+      }
     }
   });
 
+  // Host can skip kill selection and advance (answerer AFK / no valid targets UX)
+  socket.on("host:skipKill", ({ code }: { code: string }) => {
+    const state = getRoom(code);
+    if (!state || state.hostSocketId !== socket.id) return;
+    if (state.phase.kind !== "locked") return;
+    advanceAfterQuestion(state);
+  });
+
   socket.on("player:assignKillTarget", ({ code, targetId }: { code: string; targetId: string }) => {
-    const state = rooms.get(code);
+    const state = getRoom(code);
     if (!state) return;
     if (state.phase.kind !== "locked") return;
     if (state.overtime) return; // No kills in OT
@@ -581,13 +636,13 @@ io.on("connection", (socket) => {
     if (state.matchId)
       prisma.matchEvent
         .create({ data: { matchId: state.matchId, type: "kill_applied", payload: { targetId } } })
-        .catch(() => {});
+        .catch((err) => logDbError("persist", err));
     // End question and advance
     advanceAfterQuestion(state);
   });
 
   socket.on("host:markIncorrectInitial", ({ code }: { code: string }) => {
-    const state = rooms.get(code);
+    const state = getRoom(code);
     if (!state || state.hostSocketId !== socket.id) return;
     if (state.phase.kind !== "locked") return;
     const initialTeam = state.players[state.phase.playerId]?.team;
@@ -599,16 +654,16 @@ io.on("connection", (socket) => {
     if (state.matchId)
       prisma.matchEvent
         .create({ data: { matchId: state.matchId, type: "steal_open", payload: { team: stealTeam } } })
-        .catch(() => {});
+        .catch((err) => logDbError("persist", err));
     setTimeout(() => {
-      const current = rooms.get(code);
+      const current = getRoom(code);
       if (!current) return;
       if (current.phase.kind !== "steal_open") return; // someone already locked/graded
       if (current.overtime) {
         // In OT, no random kills on steal timeout; just proceed
         io.to(code).emit("steal:timeout", {});
         if (current.matchId)
-          prisma.matchEvent.create({ data: { matchId: current.matchId, type: "steal_timeout", payload: {} } }).catch(() => {});
+          prisma.matchEvent.create({ data: { matchId: current.matchId, type: "steal_timeout", payload: {} } }).catch((err) => logDbError("persist", err));
         advanceAfterQuestion(current);
       } else {
         // No steal attempt -> random eligible on stealing team loses 1
@@ -617,25 +672,25 @@ io.on("connection", (socket) => {
         if (current.matchId)
           prisma.matchEvent
             .create({ data: { matchId: current.matchId, type: "steal_timeout", payload: { killed } } })
-            .catch(() => {});
+            .catch((err) => logDbError("persist", err));
         advanceAfterQuestion(current);
       }
     }, STEAL_TIME_MS + 10);
   });
 
   socket.on("host:markCorrectSteal", ({ code }: { code: string }) => {
-    const state = rooms.get(code);
+    const state = getRoom(code);
     if (!state || state.hostSocketId !== socket.id) return;
     if (state.phase.kind !== "locked") return;
     const answerer = state.players[state.phase.playerId];
     if (!answerer) return;
     state.scores[answerer.team] += 1;
     if (state.matchId)
-      prisma.match.update({ where: { id: state.matchId }, data: { scoreA: state.scores.A, scoreB: state.scores.B } }).catch(() => {});
+      prisma.match.update({ where: { id: state.matchId }, data: { scoreA: state.scores.A, scoreB: state.scores.B } }).catch((err) => logDbError("persist", err));
     if (state.matchId)
       prisma.matchEvent
         .create({ data: { matchId: state.matchId, type: "correct_steal", payload: { playerId: answerer.id, team: answerer.team } } })
-        .catch(() => {});
+        .catch((err) => logDbError("persist", err));
     if (state.overtime) {
       // Sudden death: end immediately
       state.phase = { kind: "ended" };
@@ -644,7 +699,7 @@ io.on("connection", (socket) => {
       if (state.matchId)
         prisma.match
           .update({ where: { id: state.matchId }, data: { status: "completed", scoreA: state.scores.A, scoreB: state.scores.B } })
-          .catch(() => {});
+          .catch((err) => logDbError("persist", err));
     } else {
       // No kill on steals
       advanceAfterQuestion(state);
@@ -652,12 +707,12 @@ io.on("connection", (socket) => {
   });
 
   socket.on("host:markIncorrectSteal", ({ code }: { code: string }) => {
-    const state = rooms.get(code);
+    const state = getRoom(code);
     if (!state || state.hostSocketId !== socket.id) return;
     if (state.phase.kind !== "locked") return;
     // End question; both teams already down one buzz (initial + steal buzzer)
     if (state.matchId)
-      prisma.matchEvent.create({ data: { matchId: state.matchId, type: "incorrect_steal", payload: {} } }).catch(() => {});
+      prisma.matchEvent.create({ data: { matchId: state.matchId, type: "incorrect_steal", payload: {} } }).catch((err) => logDbError("persist", err));
     advanceAfterQuestion(state);
   });
 });
@@ -692,11 +747,16 @@ process.on('SIGINT', () => {
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 server.listen(PORT, () => {
-  // eslint-disable-next-line no-console
+  const dbMeta = databaseInfo();
   console.log(`Server listening on http://localhost:${PORT}`);
-  console.log(`PORT env: ${process.env.PORT}`);
-  console.log(`Socket.IO CORS: * (no credentials)`);
-  console.log(`Available transports: websocket, polling (path=/socket.io)`);
+  console.log(`Socket.IO path=/socket.io (websocket + polling)`);
+  console.log(`Env files: ${loadedEnvFiles.length ? loadedEnvFiles.join(" | ") : "(none)"}`);
+  console.log(`Database: ${dbMeta.provider} → ${dbMeta.urlRedacted}`);
+  console.log(
+    livekitConfigured()
+      ? `LiveKit: configured (${livekitHost()})`
+      : "LiveKit: NOT configured — /livekit/token will return 503"
+  );
 });
 
 

@@ -18,8 +18,8 @@ interface Props {
 
 export default function StageVideoLayout({ code, identity, leftIdentities, rightIdentities, hostIdentity, screen, hostLabel, playerNames }: Props) {
   const [room, setRoom] = useState<Room | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [connState, setConnState] = useState<string>("disconnected");
+  const [, setError] = useState<string | null>(null);
+  const [, setConnState] = useState<string>("disconnected");
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const identityToTrack = useRef<Map<string, RemoteTrack>>(new Map());
   const [, force] = useState(0);
@@ -84,7 +84,8 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
             try { pub.setSubscribed(true); } catch {}
           }
         });
-        await lkRoom.connect(data.url, data.token, { autoSubscribe: true, rtcConfig: { iceTransportPolicy: "relay" } });
+        // Prefer default ICE (host/srflx/relay). LiveKit Cloud supplies TURN when needed.
+        await lkRoom.connect(data.url, data.token, { autoSubscribe: true });
         await publishLocal(lkRoom);
         // Fallback: scan already-subscribed remote video tracks and map identities
         try {
@@ -229,7 +230,7 @@ export default function StageVideoLayout({ code, identity, leftIdentities, right
   );
 }
 
-function VideoRender({ track, fallbackLabel }: { track: RemoteTrack | null; fallbackLabel: string }) {
+function VideoRender({ track }: { track: RemoteTrack | null; fallbackLabel?: string }) {
   const [el, setEl] = useState<HTMLVideoElement | null>(null);
   useEffect(() => {
     if (!el) return;

@@ -1,0 +1,6 @@
+# Keep web deploys focused
+../server
+../../node_modules
+.env
+.env.*
+.env.local

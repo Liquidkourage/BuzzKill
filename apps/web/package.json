@@ -4,9 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start -p $PORT",
+    "build": "next build",
+    "start": "next start -p ${PORT:-3000}",
     "lint": "eslint"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.14",
@@ -15,7 +18,7 @@
     "express": "^4.21.2",
     "livekit-client": "^2.15.6",
     "livekit-server-sdk": "^2.5.4",
-    "next": "15.5.2",
+    "next": "^15.5.9",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "socket.io": "^4.8.1",

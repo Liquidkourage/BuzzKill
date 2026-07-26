@@ -1,0 +1,7 @@
+# Keep server deploys lean / avoid scanning the Next.js app
+../web
+../../node_modules
+data
+*.db
+.env
+.env.*

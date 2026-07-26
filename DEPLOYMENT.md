@@ -1,79 +1,42 @@
 # BuzzKill Deployment Guide
 
-## Deploy to Railway
+## Architecture (Railway)
 
-### 1. Set up LiveKit Cloud (Free)
+| Service | Role | Public URL pattern |
+|---------|------|--------------------|
+| **web** | Next.js UI (`/host`, `/play`, `/admin`) | `https://web-….up.railway.app` |
+| **BuzzKill** | Socket.IO + LiveKit tokens + match API | `https://buzzkill-….up.railway.app` |
+| **Postgres** | Persistent match history | private (`DATABASE_URL`) |
 
-1. Go to [LiveKit Cloud](https://cloud.livekit.io)
-2. Sign up for a free account
-3. Create a new project
-4. Copy your project URL, API Key, and API Secret
+Players only open the **web** URL. Video media goes through **LiveKit Cloud** (not Railway).
 
-### 2. Deploy to Railway
+## One-time setup
 
-1. **Install Railway CLI**:
-   ```bash
-   npm install -g @railway/cli
-   ```
+1. LiveKit Cloud project → set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` on the **BuzzKill** service.
+2. Add Railway **Postgres** → set server `DATABASE_URL=${{Postgres.DATABASE_URL}}`.
+3. On **web**, set `NEXT_PUBLIC_SERVER_URL` to the BuzzKill public HTTPS URL.
+4. Deploy both services from GitHub `main` (or `railway up --service <name>`).
 
-2. **Login to Railway**:
-   ```bash
-   railway login
-   ```
+## Local development (optional)
 
-3. **Initialize Railway project**:
-   ```bash
-   railway init
-   ```
+You do **not** need a local API if you point the web app at Railway:
 
-4. **Set environment variables**:
-   ```bash
-   railway variables set LIVEKIT_URL=wss://your-project.livekit.cloud
-   railway variables set LIVEKIT_API_KEY=APIxxxxxxxxxxxxxxxxxxxx
-   railway variables set LIVEKIT_API_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-   railway variables set DATABASE_URL=file:./prisma/dev.db
-   railway variables set PORT=4000
-   ```
-
-5. **Deploy**:
-   ```bash
-   railway up
-   ```
-
-6. **Get your app URL**:
-   ```bash
-   railway domain
-   ```
-
-7. **Set the web app URL**:
-   ```bash
-   railway variables set NEXT_PUBLIC_SERVER_URL=https://your-app.railway.app
-   ```
-
-### 3. Test Cross-Device Access
-
-Once deployed, anyone can access your game at:
-- **Your Railway URL**: `https://your-app.railway.app`
-- **Host**: `https://your-app.railway.app/host`
-- **Play**: `https://your-app.railway.app/play`
-- **Admin**: `https://your-app.railway.app/admin/matches`
-
-### 4. Features
-
-✅ **Real video streaming** via LiveKit Cloud  
-✅ **Cross-device access** - works on any device with a browser  
-✅ **Persistent matches** - game data saved to database  
-✅ **Admin panel** - view match history  
-✅ **Real-time gameplay** - Socket.IO for instant updates  
-
-## Local Development
-
-For local development with video:
 ```bash
-npm run dev
+# apps/web/.env.local
+NEXT_PUBLIC_SERVER_URL=https://buzzkill-production.up.railway.app
+npm run dev:web
 ```
 
-The app will run on:
-- Web: http://localhost:3000
-- Server: http://localhost:4000
-- LiveKit: ws://localhost:7880 (if running local LiveKit server)
+To run the API locally against Railway Postgres:
+
+```bash
+railway link -p BuzzKill
+railway run -s BuzzKill npm run dev -w apps/server
+```
+
+## URLs
+
+- Host: `https://<web>/host`
+- Play: `https://<web>/play`
+- Admin: `https://<web>/admin/matches`
+- API health: `https://<server>/health`

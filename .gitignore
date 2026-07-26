@@ -10,4 +10,12 @@ build
 *.local
 .DS_Store
 
+# Persistent local SQLite (keep apps/server/data/.gitkeep)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+apps/server/data/*
+!apps/server/data/.gitkeep
+
 

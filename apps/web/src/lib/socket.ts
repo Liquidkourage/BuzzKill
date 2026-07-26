@@ -9,10 +9,11 @@ export function getSocket(): Socket {
     console.log('Connecting to server:', serverUrl);
     socketInstance = io(serverUrl, {
       path: "/socket.io",
-      transports: ["polling"],
+      transports: ["websocket", "polling"],
       autoConnect: true,
-      timeout: 10000,
-      forceNew: true
+      timeout: 12000,
+      reconnection: true,
+      reconnectionAttempts: 12,
     });
     
     socketInstance.on('connect', () => {

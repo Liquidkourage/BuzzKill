@@ -1,0 +1,2 @@
+# Persistent SQLite database directory (buzzkill.db is gitignored).
+# On Railway/production, mount a volume here or set DATABASE_URL to Postgres.
