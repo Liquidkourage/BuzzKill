@@ -90,6 +90,12 @@ export async function registerTeam(input: {
     data: { name: teamName, slug },
   });
 
+  const rosterNames = rosterText
+    .split(/\r?\n|,/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 5);
+
   try {
     const registration = await prisma.registration.create({
       data: {
@@ -98,10 +104,13 @@ export async function registerTeam(input: {
         captainName,
         captainEmail,
         captainPhone: input.captainPhone?.trim() || null,
-        rosterText,
+        rosterText: rosterNames.join("\n") || rosterText,
         paymentStatus: "pending",
+        roster: {
+          create: rosterNames.map((name, i) => ({ name, sortOrder: i })),
+        },
       },
-      include: { team: true, season: true },
+      include: { team: true, season: true, roster: true },
     });
     return registration;
   } catch (err) {

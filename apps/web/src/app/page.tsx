@@ -35,6 +35,9 @@ export default async function Home() {
             <Link href="/play" className="eyebrow text-[color:var(--muted)] hover:text-[color:var(--ink)]">
               Match night
             </Link>
+            <Link href="/login" className="eyebrow text-[color:var(--muted)] hover:text-[color:var(--ink)]">
+              Sign in
+            </Link>
           </div>
         </nav>
 

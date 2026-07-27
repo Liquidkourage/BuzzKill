@@ -1,4 +1,4 @@
-// BuzzKill league schema — organizer-run seasons, paid team entry, standings
+// BuzzKill league schema — accounts, season weeks, scheduled matches
 
 generator client {
   provider = "prisma-client-js"
@@ -10,74 +10,142 @@ datasource db {
 }
 
 model User {
-  id          String       @id @default(cuid())
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  email       String       @unique
-  name        String?
-  memberships TeamMember[]
+  id             String           @id @default(cuid())
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  email          String           @unique
+  name           String?
+  passwordHash   String
+  isCommissioner Boolean          @default(false)
+  isReader       Boolean          @default(false)
+  memberships    TeamMember[]
+  rosterSpots    RosterPlayer[]
+  readingMatches ScheduledMatch[] @relation("MatchReader")
 }
 
 model Season {
-  id            String         @id @default(cuid())
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  name          String
-  slug          String         @unique
-  status        String         @default("open") // open | active | closed
-  entryFeeCents Int            @default(0)
-  entryNote     String?
-  blurb         String?
-  registrations Registration[]
-  matches       Match[]
+  id              String           @id @default(cuid())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  name            String
+  slug            String           @unique
+  status          String           @default("open") // open | active | closed
+  entryFeeCents   Int              @default(0)
+  entryNote       String?
+  blurb           String?
+  registrations   Registration[]
+  matches         Match[]
+  weeks           SeasonWeek[]
+  scheduledMatches ScheduledMatch[]
 }
 
 model Team {
-  id            String         @id @default(cuid())
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  name          String
-  slug          String?        @unique
-  members       TeamMember[]
-  homeMatches   Match[]        @relation("homeMatches")
-  awayMatches   Match[]        @relation("awayMatches")
-  registrations Registration[]
+  id               String           @id @default(cuid())
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  name             String
+  slug             String?          @unique
+  members          TeamMember[]
+  homeMatches      Match[]          @relation("homeMatches")
+  awayMatches      Match[]          @relation("awayMatches")
+  registrations    Registration[]
+  scheduledHome    ScheduledMatch[] @relation("schedHome")
+  scheduledAway    ScheduledMatch[] @relation("schedAway")
 }
 
 model Registration {
-  id            String   @id @default(cuid())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id            String         @id @default(cuid())
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   seasonId      String
-  season        Season   @relation(fields: [seasonId], references: [id])
+  season        Season         @relation(fields: [seasonId], references: [id])
   teamId        String
-  team          Team     @relation(fields: [teamId], references: [id])
+  team          Team           @relation(fields: [teamId], references: [id])
   captainName   String
   captainEmail  String
   captainPhone  String?
-  rosterText    String
-  paymentStatus String   @default("pending") // pending | paid | waived
-  wins          Int      @default(0)
-  losses        Int      @default(0)
-  ties          Int      @default(0)
-  pointsFor     Int      @default(0)
-  pointsAgainst Int      @default(0)
+  rosterText    String         @default("")
+  paymentStatus String         @default("pending") // pending | paid | waived
+  wins          Int            @default(0)
+  losses        Int            @default(0)
+  ties          Int            @default(0)
+  pointsFor     Int            @default(0)
+  pointsAgainst Int            @default(0)
+  roster        RosterPlayer[]
 
   @@unique([seasonId, teamId])
   @@index([seasonId])
+}
+
+/// Named player on a season registration (target: 5 per team).
+model RosterPlayer {
+  id             String       @id @default(cuid())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  registrationId String
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  name           String
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id])
+  sortOrder      Int          @default(0)
+
+  @@index([registrationId, sortOrder])
 }
 
 model TeamMember {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  role      String
+  role      String // captain | player
   userId    String
   teamId    String
-  user      User     @relation(fields: [userId], references: [id])
-  team      Team     @relation(fields: [teamId], references: [id])
+  seasonId  String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@unique([userId, teamId])
+  @@index([teamId])
+}
+
+/// Calendar week for a season (Sunday start → Saturday end).
+model SeasonWeek {
+  id        String           @id @default(cuid())
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  seasonId  String
+  season    Season           @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  weekIndex Int
+  startsOn  DateTime
+  label     String?
+  matches   ScheduledMatch[]
+
+  @@unique([seasonId, weekIndex])
+  @@index([seasonId])
+}
+
+/// Planned match inside a season week. Each team ≤ 1 match per week.
+model ScheduledMatch {
+  id          String     @id @default(cuid())
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  seasonId    String
+  weekId      String
+  teamAId     String
+  teamBId     String
+  readerId    String?
+  status      String     @default("scheduled") // scheduled | confirmed | live | completed | canceled
+  startsAt    DateTime?
+  notes       String?
+  liveMatchId String?    @unique
+  season      Season     @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  week        SeasonWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  teamA       Team       @relation("schedHome", fields: [teamAId], references: [id])
+  teamB       Team       @relation("schedAway", fields: [teamBId], references: [id])
+  reader      User?      @relation("MatchReader", fields: [readerId], references: [id])
+
+  @@index([weekId])
+  @@index([seasonId])
+  @@index([readerId])
 }
 
 model Match {
@@ -112,7 +180,6 @@ model MatchEvent {
   match     Match    @relation(fields: [matchId], references: [id])
 }
 
-/// Named set of questions for a match night (or theme night).
 model GamePack {
   id          String     @id @default(cuid())
   createdAt   DateTime   @default(now())
@@ -120,7 +187,7 @@ model GamePack {
   name        String
   slug        String     @unique
   description String?
-  status      String     @default("draft") // draft | ready | archived
+  status      String     @default("draft")
   questions   Question[]
   matches     Match[]
 }

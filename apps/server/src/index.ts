@@ -45,6 +45,30 @@ import {
   updatePack,
   updateQuestion,
 } from "./packs";
+import {
+  ensureCommissioner,
+  publicUser,
+  requireAuth,
+  requireCommissioner,
+  resolveUser,
+  signToken,
+  verifyPassword,
+  type AuthedRequest,
+} from "./auth";
+import {
+  assignReader,
+  commissionerCreateTeam,
+  commissionerDashboard,
+  createUser,
+  ensureWeeks,
+  getAccountHome,
+  getTeamPortal,
+  listSchedule,
+  listUsers,
+  scheduleMatch,
+  setRoster,
+  setUserFlags,
+} from "./accounts";
 
 type TeamId = "A" | "B";
 
@@ -121,7 +145,9 @@ app.use((req, res, next) => {
 app.use(cors({ origin: "*" }));
 app.use(express.json({ limit: "100kb" }));
 
-function organizerAuthorized(req: express.Request): boolean {
+async function organizerAuthorized(req: express.Request): Promise<boolean> {
+  const user = await resolveUser(req);
+  if (user?.isCommissioner) return true;
   const key = process.env.ORGANIZER_KEY;
   if (!key) return false;
   const header = String(req.headers["x-organizer-key"] || "");
@@ -206,9 +232,182 @@ app.post("/league/register", async (req, res) => {
   }
 });
 
-// Organizer: mark dues paid (requires ORGANIZER_KEY)
+// ——— Auth / accounts ———
+app.post("/auth/login", async (req, res) => {
+  try {
+    const email = String(req.body?.email || "")
+      .trim()
+      .toLowerCase();
+    const password = String(req.body?.password || "");
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || !verifyPassword(password, user.passwordHash)) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+    const token = signToken(user.id);
+    res.json({ ok: true, token, user: publicUser(user) });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "login failed" });
+  }
+});
+
+app.get("/auth/me", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    res.json(await getAccountHome(req.user!.id));
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "failed" });
+  }
+});
+
+app.get("/account/home", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    res.json(await getAccountHome(req.user!.id));
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "failed" });
+  }
+});
+
+app.get("/account/team", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const portal = await getTeamPortal(req.user!.id);
+    if (!portal) return res.status(404).json({ error: "No team membership" });
+    res.json(portal);
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "failed" });
+  }
+});
+
+app.put("/account/team/roster", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const portal = await getTeamPortal(req.user!.id);
+    if (!portal?.registration) return res.status(404).json({ error: "No registration" });
+    if (portal.role !== "captain" && !req.user!.isCommissioner) {
+      return res.status(403).json({ error: "Captain only" });
+    }
+    const names = Array.isArray(req.body?.names) ? req.body.names.map(String) : [];
+    const roster = await setRoster(portal.registration.id, names);
+    res.json({ ok: true, roster });
+  } catch (err: any) {
+    res.status(err?.status || 500).json({ error: err?.message || "failed" });
+  }
+});
+
+app.get("/commissioner", requireCommissioner, async (_req, res) => {
+  try {
+    res.json(await commissionerDashboard());
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "failed" });
+  }
+});
+
+app.post("/commissioner/users", requireCommissioner, async (req, res) => {
+  try {
+    const user = await createUser({
+      email: String(req.body?.email || ""),
+      name: String(req.body?.name || ""),
+      password: String(req.body?.password || ""),
+      isCommissioner: Boolean(req.body?.isCommissioner),
+      isReader: Boolean(req.body?.isReader),
+    });
+    res.status(201).json({ ok: true, user: publicUser(user) });
+  } catch (err: any) {
+    res.status(err?.status || 500).json({ error: err?.message || "failed" });
+  }
+});
+
+app.patch("/commissioner/users/:id", requireCommissioner, async (req, res) => {
+  try {
+    const user = await setUserFlags(req.params.id, {
+      isCommissioner:
+        req.body?.isCommissioner !== undefined ? Boolean(req.body.isCommissioner) : undefined,
+      isReader: req.body?.isReader !== undefined ? Boolean(req.body.isReader) : undefined,
+      name: req.body?.name !== undefined ? String(req.body.name) : undefined,
+    });
+    res.json({ ok: true, user: publicUser(user) });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "failed" });
+  }
+});
+
+app.post("/commissioner/teams", requireCommissioner, async (req, res) => {
+  try {
+    const rosterNames = Array.isArray(req.body?.rosterNames)
+      ? req.body.rosterNames.map(String)
+      : String(req.body?.rosterText || "")
+          .split(/\r?\n|,/)
+          .map((s: string) => s.trim())
+          .filter(Boolean);
+    const result = await commissionerCreateTeam({
+      teamName: String(req.body?.teamName || ""),
+      captainName: String(req.body?.captainName || ""),
+      captainEmail: String(req.body?.captainEmail || ""),
+      captainPassword: String(req.body?.captainPassword || ""),
+      rosterNames,
+      markPaid: Boolean(req.body?.markPaid),
+    });
+    res.status(201).json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(err?.status || 500).json({ error: err?.message || "failed" });
+  }
+});
+
+app.post("/commissioner/weeks", requireCommissioner, async (req, res) => {
+  try {
+    const count = Math.min(52, Math.max(1, Number(req.body?.count || 8)));
+    const weeks = await ensureWeeks(count);
+    res.json({ ok: true, weeks });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "failed" });
+  }
+});
+
+app.get("/commissioner/schedule", requireCommissioner, async (_req, res) => {
+  try {
+    res.json(await listSchedule());
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "failed" });
+  }
+});
+
+app.post("/commissioner/schedule", requireCommissioner, async (req, res) => {
+  try {
+    const match = await scheduleMatch({
+      weekId: String(req.body?.weekId || ""),
+      teamAId: String(req.body?.teamAId || ""),
+      teamBId: String(req.body?.teamBId || ""),
+      readerId: req.body?.readerId ? String(req.body.readerId) : undefined,
+      startsAt: req.body?.startsAt ? String(req.body.startsAt) : undefined,
+      notes: req.body?.notes ? String(req.body.notes) : undefined,
+    });
+    res.status(201).json({ ok: true, match });
+  } catch (err: any) {
+    res.status(err?.status || 500).json({ error: err?.message || "failed" });
+  }
+});
+
+app.patch("/commissioner/schedule/:id/reader", requireCommissioner, async (req, res) => {
+  try {
+    const readerId =
+      req.body?.readerId === null || req.body?.readerId === ""
+        ? null
+        : String(req.body?.readerId || "");
+    const match = await assignReader(req.params.id, readerId);
+    res.json({ ok: true, match });
+  } catch (err: any) {
+    res.status(err?.status || 500).json({ error: err?.message || "failed" });
+  }
+});
+
+app.get("/commissioner/users", requireCommissioner, async (_req, res) => {
+  try {
+    res.json({ users: await listUsers() });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "failed" });
+  }
+});
+
+// Organizer: mark dues paid (commissioner session or ORGANIZER_KEY)
 app.post("/league/registrations/:id/payment", async (req, res) => {
-  if (!organizerAuthorized(req)) {
+  if (!(await organizerAuthorized(req))) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   const status = String(req.body?.paymentStatus || "");
@@ -226,7 +425,7 @@ app.post("/league/registrations/:id/payment", async (req, res) => {
 // ——— Game packs / question bank ———
 app.get("/packs", async (req, res) => {
   try {
-    const includeDrafts = organizerAuthorized(req);
+    const includeDrafts = await organizerAuthorized(req);
     res.json({ packs: await listPacks({ includeDrafts }) });
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "failed to list packs" });
@@ -237,7 +436,7 @@ app.get("/packs/:id", async (req, res) => {
   try {
     const pack = await getPack(req.params.id);
     if (!pack) return res.status(404).json({ error: "Pack not found" });
-    if (pack.status !== "ready" && !organizerAuthorized(req)) {
+    if (pack.status !== "ready" && !(await organizerAuthorized(req))) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     res.json({ pack });
@@ -247,7 +446,7 @@ app.get("/packs/:id", async (req, res) => {
 });
 
 app.post("/packs", async (req, res) => {
-  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!(await organizerAuthorized(req))) return res.status(401).json({ error: "Unauthorized" });
   try {
     const pack = await createPack({
       name: String(req.body?.name || ""),
@@ -261,7 +460,7 @@ app.post("/packs", async (req, res) => {
 });
 
 app.patch("/packs/:id", async (req, res) => {
-  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!(await organizerAuthorized(req))) return res.status(401).json({ error: "Unauthorized" });
   try {
     const pack = await updatePack(req.params.id, {
       name: req.body?.name !== undefined ? String(req.body.name) : undefined,
@@ -275,7 +474,7 @@ app.patch("/packs/:id", async (req, res) => {
 });
 
 app.delete("/packs/:id", async (req, res) => {
-  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!(await organizerAuthorized(req))) return res.status(401).json({ error: "Unauthorized" });
   try {
     await deletePack(req.params.id);
     res.json({ ok: true });
@@ -285,7 +484,7 @@ app.delete("/packs/:id", async (req, res) => {
 });
 
 app.post("/packs/:id/questions", async (req, res) => {
-  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!(await organizerAuthorized(req))) return res.status(401).json({ error: "Unauthorized" });
   try {
     const q = await addQuestion(req.params.id, {
       prompt: String(req.body?.prompt || ""),
@@ -301,7 +500,7 @@ app.post("/packs/:id/questions", async (req, res) => {
 });
 
 app.post("/packs/:id/import", async (req, res) => {
-  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!(await organizerAuthorized(req))) return res.status(401).json({ error: "Unauthorized" });
   try {
     const result = await importQuestions(req.params.id, String(req.body?.text || ""));
     res.json({ ok: true, ...result });
@@ -311,7 +510,7 @@ app.post("/packs/:id/import", async (req, res) => {
 });
 
 app.patch("/questions/:id", async (req, res) => {
-  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!(await organizerAuthorized(req))) return res.status(401).json({ error: "Unauthorized" });
   try {
     const q = await updateQuestion(req.params.id, {
       prompt: req.body?.prompt !== undefined ? String(req.body.prompt) : undefined,
@@ -328,7 +527,7 @@ app.patch("/questions/:id", async (req, res) => {
 });
 
 app.delete("/questions/:id", async (req, res) => {
-  if (!organizerAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!(await organizerAuthorized(req))) return res.status(401).json({ error: "Unauthorized" });
   try {
     await deleteQuestion(req.params.id);
     res.json({ ok: true });
@@ -1181,6 +1380,11 @@ server.listen(PORT, () => {
       ? `LiveKit: configured (${livekitHost()})`
       : "LiveKit: NOT configured — /livekit/token will return 503"
   );
+  ensureCommissioner()
+    .then((u) => {
+      if (u) console.log(`[auth] Commissioner ready: ${u.email}`);
+    })
+    .catch((err) => logDbError("ensureCommissioner", err));
 });
 
 
