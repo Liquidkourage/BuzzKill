@@ -316,7 +316,7 @@ app.post("/commissioner/users", requireCommissioner, async (req, res) => {
 
 app.patch("/commissioner/users/:id", requireCommissioner, async (req, res) => {
   try {
-    const user = await setUserFlags(req.params.id, {
+    const user = await setUserFlags(String(req.params.id), {
       isCommissioner:
         req.body?.isCommissioner !== undefined ? Boolean(req.body.isCommissioner) : undefined,
       isReader: req.body?.isReader !== undefined ? Boolean(req.body.isReader) : undefined,
@@ -390,7 +390,7 @@ app.patch("/commissioner/schedule/:id/reader", requireCommissioner, async (req, 
       req.body?.readerId === null || req.body?.readerId === ""
         ? null
         : String(req.body?.readerId || "");
-    const match = await assignReader(req.params.id, readerId);
+    const match = await assignReader(String(req.params.id), readerId);
     res.json({ ok: true, match });
   } catch (err: any) {
     res.status(err?.status || 500).json({ error: err?.message || "failed" });
