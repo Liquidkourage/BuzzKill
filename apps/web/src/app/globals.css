@@ -1,29 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  /* BuzzKill — sharp broadcast energy, light on ego */
-  --ink: #12161b;
-  --ink-2: #1c232b;
-  --paper: #f1f4f7;
-  --paper-2: #e4eaef;
-  --line: rgba(18, 22, 27, 0.1);
-  --line-strong: rgba(18, 22, 27, 0.22);
-  --muted: rgba(18, 22, 27, 0.56);
-  --buzz: #e63612;
-  --buzz-deep: #b5280d;
-  --live: #ef9f0a;
-  --team-a: #0b6e99;
-  --team-b: #c45c12;
+  /* Cabinet colors + Readable First type/shape — site-wide */
+  --ink: #0a0a0a;
+  --ink-2: #141414;
+  --paper: #f4f4ee;
+  --paper-2: #e8e8e0;
+  --line: rgba(10, 10, 10, 0.12);
+  --line-strong: rgba(10, 10, 10, 0.28);
+  --muted: rgba(10, 10, 10, 0.56);
+  --buzz: #ff0000;
+  --buzz-deep: #b30000;
+  --live: #ffe600;
+  --team-a: #ffe600;
+  --team-b: #ff0000;
   --ok: #1f8a4c;
-  --stage: #0d1115;
-  --stage-2: #161c23;
-  --stage-line: rgba(241, 244, 247, 0.1);
-  --stage-muted: rgba(241, 244, 247, 0.55);
-  --stage-text: #f1f4f7;
-  --radius: 6px;
-  --font-display: var(--font-syne), "Arial Black", sans-serif;
+  --stage: #000000;
+  --stage-2: #0a0a0a;
+  --stage-line: rgba(255, 230, 0, 0.22);
+  --stage-muted: rgba(255, 230, 0, 0.45);
+  --stage-text: #ffe600;
+  --radius: 4px;
+  --radius-buzz: 12px;
+  --font-display: var(--font-punch), "Arial Black", sans-serif;
   --font-body: var(--font-figtree), "Segoe UI", sans-serif;
   --font-mono: var(--font-ibm), ui-monospace, monospace;
+  --font-label: var(--font-arcade), var(--font-ibm), ui-monospace, monospace;
 }
 
 @theme inline {
@@ -64,8 +66,8 @@ select {
 /* ——— Type ——— */
 .display {
   font-family: var(--font-display);
-  font-weight: 800;
-  letter-spacing: -0.035em;
+  font-weight: 400;
+  letter-spacing: -0.03em;
   line-height: 0.94;
   text-transform: uppercase;
 }
@@ -75,23 +77,24 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
+.label-arcade {
+  font-family: var(--font-label);
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 /* ——— Surfaces ——— */
 .shell-light {
   min-height: 100vh;
   color: var(--ink);
-  background:
-    radial-gradient(1100px 520px at 85% -8%, rgba(230, 54, 18, 0.1), transparent 58%),
-    radial-gradient(800px 420px at -8% 105%, rgba(11, 110, 153, 0.08), transparent 52%),
-    linear-gradient(168deg, #f8fafc 0%, var(--paper) 42%, #e8eef4 100%);
+  background: var(--paper);
 }
 
 .shell-stage {
   min-height: 100vh;
   color: var(--stage-text);
-  background:
-    linear-gradient(180deg, rgba(239, 159, 10, 0.06), transparent 30%),
-    radial-gradient(860px 420px at 50% -8%, rgba(230, 54, 18, 0.14), transparent 52%),
-    linear-gradient(158deg, #141a20 0%, var(--stage) 42%, #080a0d 100%);
+  background: var(--stage);
 }
 
 .panel {
@@ -134,9 +137,10 @@ textarea.field {
 }
 
 .shell-stage .field {
-  border-color: var(--stage-line);
-  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid var(--stage-line);
+  background: #0a0a0a;
   color: var(--stage-text);
+  border-radius: var(--radius);
 }
 
 .field:focus {
@@ -148,62 +152,73 @@ textarea.field {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
+  border: 2px solid transparent;
+  border-radius: var(--radius-buzz);
   padding: 0.7rem 1.1rem;
+  font-family: var(--font-body);
   font-weight: 700;
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, opacity 160ms ease;
+  transition: transform 90ms ease, box-shadow 90ms ease, background 160ms ease, opacity 160ms ease;
+  box-shadow: 3px 3px 0 var(--ink);
 }
 
 .btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 .btn:not(:disabled):hover {
-  transform: translateY(-1px);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
 }
 
 .btn:not(:disabled):active {
-  transform: translateY(1px) scale(0.98);
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
 }
 
 .btn-buzz {
   background: var(--buzz);
   color: #fff;
-  border-color: var(--buzz-deep);
+  border-color: var(--ink);
 }
 
 .btn-buzz:not(:disabled):hover {
-  background: #ff4018;
+  background: #ff1a1a;
 }
 
 .btn-ink {
   background: var(--ink);
-  color: var(--paper);
+  color: var(--live);
+  border-color: var(--ink);
 }
 
 .shell-stage .btn-ink {
-  background: var(--stage-text);
+  background: var(--live);
   color: var(--ink);
+  border-color: #000;
+  box-shadow: 3px 3px 0 #000;
 }
 
 .btn-ghost {
   background: transparent;
   border-color: var(--line-strong);
   color: inherit;
+  box-shadow: none;
 }
 
 .shell-stage .btn-ghost {
   border-color: var(--stage-line);
+  color: var(--stage-text);
 }
 
 .btn-live {
   background: var(--live);
   color: var(--ink);
+  border-color: var(--ink);
 }
 
 .btn-ok {
@@ -240,12 +255,14 @@ textarea.field {
   color: var(--team-b);
 }
 
-.shell-stage .team-a {
-  color: #5eb7e0;
+.shell-stage .team-a,
+.shell-arcade .team-a {
+  color: var(--live);
 }
 
-.shell-stage .team-b {
-  color: #f0a06a;
+.shell-stage .team-b,
+.shell-arcade .team-b {
+  color: var(--buzz);
 }
 
 .phase-tag {
@@ -284,25 +301,25 @@ textarea.field {
 .buzz-pad {
   width: min(100%, 28rem);
   min-height: 7.5rem;
-  border: 0;
-  border-radius: 999px;
+  border: 3px solid #000;
+  border-radius: var(--radius-buzz);
   font-family: var(--font-display);
   font-size: clamp(2.4rem, 8vw, 3.8rem);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   cursor: pointer;
-  transition: transform 120ms ease, box-shadow 180ms ease, filter 180ms ease;
+  transition: transform 90ms ease, box-shadow 90ms ease, filter 120ms ease;
 }
 
 .buzz-pad[data-ready="true"] {
   background: var(--buzz);
   color: #fff;
-  box-shadow: 0 18px 0 var(--buzz-deep);
+  box-shadow: 6px 6px 0 #000;
   animation: buzz-breathe 2.4s ease-in-out infinite;
 }
 
 .buzz-pad[data-ready="true"]:active {
-  transform: translateY(10px);
-  box-shadow: 0 8px 0 var(--buzz-deep);
+  transform: translate(4px, 4px);
+  box-shadow: 2px 2px 0 #000;
   animation: none;
 }
 
@@ -462,47 +479,38 @@ textarea.field {
 .hero-visual {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(115deg, rgba(241, 244, 247, 0.12) 0%, transparent 38%),
-    linear-gradient(0deg, rgba(18, 22, 27, 0.9) 0%, rgba(18, 22, 27, 0.28) 40%, transparent 72%),
-    repeating-linear-gradient(
-      -16deg,
-      rgba(230, 54, 18, 0.16) 0 10px,
-      transparent 10px 26px
-    ),
-    radial-gradient(circle at 72% 32%, #2c3644 0%, #12161b 58%, #07090b 100%);
+  background: #000;
 }
 
 .hero-visual::before {
   content: "";
   position: absolute;
-  top: 18%;
-  right: -4%;
-  width: min(46vw, 22rem);
-  height: min(46vw, 22rem);
-  border: 2px solid rgba(230, 54, 18, 0.35);
-  border-radius: 50%;
-  transform: rotate(12deg);
-  animation: orbit-wink 9s ease-in-out infinite;
-  pointer-events: none;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8px;
+  background: var(--live);
 }
 
 .hero-visual::after {
   content: "";
   position: absolute;
-  inset: 0;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px);
-  background-size: 100% 5px;
-  mix-blend-mode: soft-light;
-  opacity: 0.28;
-  animation: scan 8s linear infinite;
+  top: 12%;
+  right: 8%;
+  width: min(40vw, 16rem);
+  height: min(40vw, 16rem);
+  border: 4px solid var(--buzz);
+  border-radius: var(--radius-buzz);
+  transform: rotate(8deg);
+  animation: orbit-wink 9s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .hero-copy {
   position: relative;
   z-index: 1;
-  color: #f4f6f8;
-  max-width: 18ch;
+  color: var(--live);
+  max-width: 22ch;
   display: grid;
   gap: 1.25rem;
 }
@@ -513,13 +521,15 @@ textarea.field {
   line-height: 0.85;
   letter-spacing: -0.05em;
   text-transform: uppercase;
+  color: var(--live);
   animation: rise 700ms cubic-bezier(0.2, 0.85, 0.2, 1) both;
 }
 
 .hero-line {
+  font-family: var(--font-body);
   font-size: clamp(1.05rem, 2.2vw, 1.35rem);
-  max-width: 28ch;
-  color: rgba(244, 246, 248, 0.78);
+  max-width: 32ch;
+  color: rgba(255, 230, 0, 0.78);
   animation: rise 700ms 90ms cubic-bezier(0.2, 0.85, 0.2, 1) both;
 }
 
@@ -655,8 +665,8 @@ textarea.field {
   }
 }
 
-/* ——— Arcade cabinet (player stage) ———
-   Void black · coin yellow · slap-red buzz. Fun cabinet energy. */
+/* ——— Arcade cabinet (player / host stage) ———
+   Cabinet colors · Readable First type & soft geometry. */
 .shell-arcade {
   --arc-void: #000000;
   --arc-panel: #0a0a0a;
@@ -667,7 +677,7 @@ textarea.field {
   --arc-ink: #ffe600;
   --arc-mute: #5c5800;
   --arc-line: #222200;
-  --radius: 0px;
+  --radius: 4px;
   min-height: 100vh;
   color: var(--arc-ink);
   background: var(--arc-void);
@@ -759,6 +769,7 @@ textarea.field {
   position: relative;
   background: var(--arc-panel);
   border: 2px solid var(--arc-yellow);
+  border-radius: var(--radius);
   padding: 1.25rem 1rem;
   text-align: center;
   min-height: 7.5rem;
@@ -797,13 +808,14 @@ textarea.field {
 }
 
 .shell-arcade .arc-q {
-  font-family: var(--font-punch), var(--font-display);
-  font-size: clamp(1.15rem, 4.2vw, 1.65rem);
-  line-height: 1.2;
-  letter-spacing: -0.01em;
+  font-family: var(--font-body);
+  font-size: clamp(1.15rem, 4.2vw, 1.55rem);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0;
   color: var(--arc-yellow);
-  text-transform: uppercase;
-  max-width: 28ch;
+  text-transform: none;
+  max-width: 34ch;
   margin: 0 auto;
 }
 
@@ -825,7 +837,7 @@ textarea.field {
   width: 100%;
   min-height: 7.25rem;
   border: 3px solid #000;
-  border-radius: 0;
+  border-radius: var(--radius-buzz);
   background: var(--arc-red);
   color: #fff;
   font-family: var(--font-punch), var(--font-display);
@@ -916,7 +928,26 @@ textarea.field {
 
 .shell-arcade .arc-video {
   border: 2px solid var(--arc-line);
+  border-radius: var(--radius);
   overflow: hidden;
+}
+
+.shell-arcade .strip {
+  border-color: var(--arc-line);
+}
+
+.shell-arcade .score {
+  font-family: var(--font-punch), var(--font-display);
+  color: var(--arc-yellow);
+}
+
+.shell-arcade .phase-tag {
+  font-family: var(--font-label);
+  color: var(--arc-mute);
+}
+
+.shell-arcade .phase-tag[data-live="true"] {
+  color: var(--arc-red);
 }
 
 .shell-arcade .arc-video .video-shell {
@@ -960,7 +991,7 @@ textarea.field {
   border: 2px solid var(--arc-yellow);
   background: #000;
   color: var(--arc-yellow);
-  border-radius: 0;
+  border-radius: var(--radius);
 }
 
 .shell-arcade .field:focus {
@@ -969,10 +1000,10 @@ textarea.field {
 }
 
 .shell-arcade .btn {
-  border-radius: 0;
-  font-family: var(--font-arcade), var(--font-mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.08em;
+  border-radius: var(--radius-buzz);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
   box-shadow: 3px 3px 0 #000;
 }
 
@@ -1034,16 +1065,18 @@ textarea.field {
   border: 0;
 }
 
-.shell-arcade .game-screen .cat,
-.shell-arcade .game-screen .q {
+.shell-arcade .game-screen .cat {
+  font-family: var(--font-label);
+  font-size: 0.55rem;
   color: var(--arc-yellow);
-  font-family: var(--font-punch), var(--font-display);
   text-transform: uppercase;
 }
 
-.shell-arcade .game-screen .cat {
-  font-family: var(--font-arcade), var(--font-mono);
-  font-size: 0.55rem;
+.shell-arcade .game-screen .q {
+  font-family: var(--font-body);
+  font-weight: 600;
+  color: var(--arc-yellow);
+  text-transform: none;
 }
 
 .shell-arcade .game-screen .idle {

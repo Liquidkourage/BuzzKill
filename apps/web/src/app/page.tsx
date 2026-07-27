@@ -25,20 +25,14 @@ export default async function Home() {
     <div className="shell-light">
       <header className="hero">
         <nav className="hero-nav">
-          <span className="mono text-xs tracking-[0.2em] uppercase text-[color:var(--muted)]">
+          <span className="label-arcade text-[color:var(--muted)]">
             {league?.organizer || "League night, not TED Talk"}
           </span>
           <div className="flex gap-4">
-            <Link
-              href="/standings"
-              className="mono text-xs tracking-[0.14em] uppercase text-[color:var(--muted)] hover:text-[color:var(--ink)]"
-            >
+            <Link href="/standings" className="label-arcade text-[color:var(--muted)] hover:text-[color:var(--ink)]">
               Standings
             </Link>
-            <Link
-              href="/play"
-              className="mono text-xs tracking-[0.14em] uppercase text-[color:var(--muted)] hover:text-[color:var(--ink)]"
-            >
+            <Link href="/play" className="label-arcade text-[color:var(--muted)] hover:text-[color:var(--ink)]">
               Match night
             </Link>
           </div>
@@ -53,12 +47,12 @@ export default async function Home() {
               <Link href="/enter" className="btn btn-buzz">
                 Enter your team
               </Link>
-              <Link href="/standings" className="btn btn-ink">
+              <Link href="/standings" className="btn btn-live">
                 Check the table
               </Link>
             </div>
             {season ? (
-              <p className="mono text-xs tracking-[0.12em] uppercase text-white/55 m-0">
+              <p className="label-arcade m-0" style={{ color: "rgba(255,230,0,0.55)" }}>
                 {season.name}
                 <span className="mx-2 opacity-40">·</span>
                 {formatFee(season.entryFeeCents)}
