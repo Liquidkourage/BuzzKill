@@ -19,20 +19,20 @@ export default async function Home() {
   const season = league?.season;
   const blurb =
     season?.blurb ||
-    "Paid team trivia on live video. Bring a roster, hit the buzzer, try not to get BuzzKilled.";
+    "A live team trivia league. Enter the season, show up on camera, and climb the table.";
 
   return (
     <div className="shell-light">
       <header className="hero">
         <nav className="hero-nav">
-          <span className="label-arcade text-[color:var(--muted)]">
-            {league?.organizer || "League night, not TED Talk"}
+          <span className="eyebrow text-[color:var(--muted)]">
+            {league?.organizer || "Live team trivia"}
           </span>
-          <div className="flex gap-4">
-            <Link href="/standings" className="label-arcade text-[color:var(--muted)] hover:text-[color:var(--ink)]">
+          <div className="flex gap-5">
+            <Link href="/standings" className="eyebrow text-[color:var(--muted)] hover:text-[color:var(--ink)]">
               Standings
             </Link>
-            <Link href="/play" className="label-arcade text-[color:var(--muted)] hover:text-[color:var(--ink)]">
+            <Link href="/play" className="eyebrow text-[color:var(--muted)] hover:text-[color:var(--ink)]">
               Match night
             </Link>
           </div>
@@ -48,16 +48,16 @@ export default async function Home() {
                 Enter your team
               </Link>
               <Link href="/standings" className="btn btn-live">
-                Check the table
+                View standings
               </Link>
             </div>
             {season ? (
-              <p className="label-arcade m-0" style={{ color: "rgba(255,230,0,0.55)" }}>
+              <p className="eyebrow m-0" style={{ color: "rgba(244,246,250,0.5)" }}>
                 {season.name}
                 <span className="mx-2 opacity-40">·</span>
                 {formatFee(season.entryFeeCents)}
                 <span className="mx-2 opacity-40">·</span>
-                {league?.teamCount ?? 0} teams in
+                {league?.teamCount ?? 0} teams
               </p>
             ) : null}
           </div>
@@ -65,16 +65,16 @@ export default async function Home() {
       </header>
 
       <section className="section">
-        <h2>How it works</h2>
+        <h2>How the league works</h2>
         <p className="max-w-xl text-[color:var(--muted)] text-lg">
-          Pay for a seat, show up on camera, answer fast. Bragging rights optional — standings are not.
+          Pay for a season seat, bring your roster on match night, and compete live on video.
         </p>
         <ol className="rule-list max-w-3xl">
           <li>
             <div>
-              <strong>Buy in</strong>
+              <strong>Register</strong>
               <p className="m-0 mt-1 text-[color:var(--muted)]">
-                Register the team and captain. You stay pending until the organizer marks dues paid.
+                Submit your team and captain. Dues stay pending until the organizer confirms payment.
               </p>
             </div>
           </li>
@@ -82,15 +82,15 @@ export default async function Home() {
             <div>
               <strong>Match night</strong>
               <p className="m-0 mt-1 text-[color:var(--muted)]">
-                Room code, four on a side, live video, fifteen seconds on the clock. No essay answers.
+                Join with a room code. Four players per side, timed buzzers, live video.
               </p>
             </div>
           </li>
           <li>
             <div>
-              <strong>Climb or cope</strong>
+              <strong>Standings</strong>
               <p className="m-0 mt-1 text-[color:var(--muted)]">
-                Finished matches update the season table. Wins count. Vibes do not.
+                Completed matches update the season table automatically.
               </p>
             </div>
           </li>
@@ -100,7 +100,7 @@ export default async function Home() {
             Enter the season
           </Link>
           <Link href="/host" className="btn btn-ghost">
-            Run match night
+            Host a match
           </Link>
         </div>
       </section>

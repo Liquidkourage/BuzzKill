@@ -22,14 +22,13 @@ export default async function StandingsPage() {
     <main className="shell-light px-6 py-10 max-w-4xl mx-auto flex flex-col gap-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--muted)]">
+          <Link href="/" className="eyebrow text-[color:var(--muted)]">
             BuzzKill
           </Link>
           <h1 className="display text-5xl mt-2 m-0">Standings</h1>
           <p className="mt-2 text-[color:var(--muted)] m-0">
             {season?.name || "Current season"}
             {season?.status ? ` · ${season.status}` : ""}
-            <span className="opacity-50"> — receipts only</span>
           </p>
         </div>
         <div className="flex gap-2">

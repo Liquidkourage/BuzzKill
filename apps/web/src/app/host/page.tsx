@@ -177,20 +177,20 @@ export default function HostPage() {
 
   if (!code) {
     return (
-      <main className="shell-arcade px-5 py-8 max-w-xl mx-auto flex flex-col gap-8">
+      <main className="shell-stage px-5 py-8 max-w-xl mx-auto flex flex-col gap-8">
         <div>
-          <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--arc-mute)]">
+          <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--stage-muted)]">
             BuzzKill
           </Link>
           <h1 className="display text-6xl mt-3">Match night</h1>
-          <p className="mt-3 text-[color:var(--arc-mute)] text-lg">
-            Pair two teams, load a pack, open the room. Keep it tight — the table is watching.
+          <p className="mt-3 text-[color:var(--stage-muted)] text-lg">
+            Pair two teams, load a question pack, and open the room for match night.
           </p>
         </div>
 
         {leagueTeams.length >= 2 ? (
           <div className="flex flex-col gap-3">
-            <label className="mono text-[0.65rem] tracking-[0.14em] uppercase text-[color:var(--arc-mute)]">
+            <label className="mono text-[0.65rem] tracking-[0.14em] uppercase text-[color:var(--stage-muted)]">
               Side A
             </label>
             <select className="field" value={teamAId} onChange={(e) => setTeamAId(e.target.value)}>
@@ -202,7 +202,7 @@ export default function HostPage() {
                 </option>
               ))}
             </select>
-            <label className="mono text-[0.65rem] tracking-[0.14em] uppercase text-[color:var(--arc-mute)]">
+            <label className="mono text-[0.65rem] tracking-[0.14em] uppercase text-[color:var(--stage-muted)]">
               Side B
             </label>
             <select className="field" value={teamBId} onChange={(e) => setTeamBId(e.target.value)}>
@@ -216,7 +216,7 @@ export default function HostPage() {
             </select>
           </div>
         ) : (
-          <p className="m-0 text-sm text-[color:var(--arc-mute)]">
+          <p className="m-0 text-sm text-[color:var(--stage-muted)]">
             No registered teams yet —{" "}
             <Link href="/enter" className="underline underline-offset-2">
               teams enter here
@@ -226,7 +226,7 @@ export default function HostPage() {
         )}
 
         <div className="flex flex-col gap-2">
-          <label className="mono text-[0.65rem] tracking-[0.14em] uppercase text-[color:var(--arc-mute)]">
+          <label className="mono text-[0.65rem] tracking-[0.14em] uppercase text-[color:var(--stage-muted)]">
             Question pack
           </label>
           <select className="field" value={packId} onChange={(e) => setPackId(e.target.value)}>
@@ -238,7 +238,7 @@ export default function HostPage() {
             ))}
           </select>
           {readyPacks.length === 0 ? (
-            <p className="m-0 text-xs text-[color:var(--arc-mute)]">
+            <p className="m-0 text-xs text-[color:var(--stage-muted)]">
               No ready packs — build one under{" "}
               <Link href="/packs" className="underline underline-offset-2">
                 Question packs
@@ -252,13 +252,13 @@ export default function HostPage() {
           {teamAId && teamBId ? "Start league match" : "Open room"}
         </button>
         {leagueTeams.length >= 2 ? (
-          <p className="m-0 text-xs text-[color:var(--arc-mute)]">
+          <p className="m-0 text-xs text-[color:var(--stage-muted)]">
             Leave both sides blank for a scratch room that won&apos;t touch standings.
           </p>
         ) : null}
 
         <div className="strip">
-          <div className="w-full text-sm text-[color:var(--arc-mute)]">Already mid-match?</div>
+          <div className="w-full text-sm text-[color:var(--stage-muted)]">Already mid-match?</div>
           <input
             className="field mono tracking-[0.2em] uppercase flex-1 min-w-[12rem]"
             placeholder="ROOM CODE"
@@ -269,7 +269,7 @@ export default function HostPage() {
             Reclaim host
           </button>
         </div>
-        <div className="flex flex-wrap gap-4 text-sm text-[color:var(--arc-mute)]">
+        <div className="flex flex-wrap gap-4 text-sm text-[color:var(--stage-muted)]">
           <Link href="/packs" className="underline underline-offset-2">
             Question packs
           </Link>
@@ -277,26 +277,26 @@ export default function HostPage() {
             Organizer desk
           </Link>
         </div>
-        {status ? <p className="text-sm text-[color:var(--arc-yellow)]">{status}</p> : null}
+        {status ? <p className="text-sm text-[color:var(--live)]">{status}</p> : null}
       </main>
     );
   }
 
   return (
-    <main className="shell-arcade px-4 sm:px-6 py-5 max-w-[1500px] mx-auto flex flex-col gap-5">
+    <main className="shell-stage px-4 sm:px-6 py-5 max-w-[1500px] mx-auto flex flex-col gap-5">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--arc-mute)]">
+          <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--stage-muted)]">
             BuzzKill
           </Link>
           <h1 className="display text-5xl mt-1">Control</h1>
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <div className="mono text-[0.65rem] tracking-[0.18em] uppercase text-[color:var(--arc-mute)]">
+            <div className="mono text-[0.65rem] tracking-[0.18em] uppercase text-[color:var(--stage-muted)]">
               Room
             </div>
-            <div className="display text-4xl tracking-[0.12em] text-[color:var(--arc-yellow)]">{code}</div>
+            <div className="display text-4xl tracking-[0.12em] text-[color:var(--live)]">{code}</div>
           </div>
           <button className="btn btn-ghost" onClick={copyCode}>
             {copied ? "Copied" : "Copy code"}
@@ -320,7 +320,7 @@ export default function HostPage() {
         <span className="phase-tag" data-live={live ? "true" : "false"}>
           {PHASE_LABEL[phase]}
         </span>
-        {status ? <span className="text-sm text-[color:var(--arc-yellow)]">{status}</span> : null}
+        {status ? <span className="text-sm text-[color:var(--live)]">{status}</span> : null}
       </div>
 
       {state && (
@@ -332,7 +332,7 @@ export default function HostPage() {
             <div className="score team-a">{state?.scores?.A ?? 0}</div>
           </div>
           <div className="flex flex-col items-center gap-2">
-            <div className="mono text-sm text-[color:var(--arc-mute)]">
+            <div className="mono text-sm text-[color:var(--stage-muted)]">
               Q {Number(state?.questionIndex ?? 0) + 1}/{state?.maxQuestions ?? 20}
               {state?.overtime ? " · OT" : ""}
             </div>
@@ -366,9 +366,9 @@ export default function HostPage() {
                   return (
                     <li
                       key={pid}
-                      className="flex items-center justify-between text-sm border-b border-[color:var(--arc-line)] pb-2"
+                      className="flex items-center justify-between text-sm border-b border-[color:var(--stage-line)] pb-2"
                     >
-                      <span className={locked ? "text-[color:var(--arc-yellow)]" : ""}>
+                      <span className={locked ? "text-[color:var(--live)]" : ""}>
                         {p.name}
                         {locked ? " · locked" : ""}
                       </span>
@@ -381,7 +381,7 @@ export default function HostPage() {
                   );
                 })}
                 {(state.slots?.[t] || []).length === 0 ? (
-                  <li className="text-xs text-[color:var(--arc-mute)]">Waiting for players</li>
+                  <li className="text-xs text-[color:var(--stage-muted)]">Waiting for players</li>
                 ) : null}
               </ul>
             </div>
@@ -393,7 +393,7 @@ export default function HostPage() {
         <h2 className="display text-2xl m-0">Board</h2>
         {state?.packName || readyPacks.length > 0 ? (
           <div className="flex flex-wrap gap-2 items-center">
-            <span className="mono text-xs tracking-[0.12em] uppercase text-[color:var(--arc-mute)]">
+            <span className="mono text-xs tracking-[0.12em] uppercase text-[color:var(--stage-muted)]">
               {state?.packName
                 ? `${state.packName} · Q ${Math.max(0, Number(state.packCursor ?? -1) + 1)}/${state.packTotal || 0}`
                 : "No pack on this room"}
@@ -465,10 +465,10 @@ export default function HostPage() {
           </button>
         )}
         {phase === "open" && (
-          <p className="m-0 text-[color:var(--arc-mute)]">Listening for the first buzz…</p>
+          <p className="m-0 text-[color:var(--stage-muted)]">Listening for the first buzz…</p>
         )}
         {phase === "steal_open" && (
-          <p className="m-0 text-[color:var(--arc-yellow)]">
+          <p className="m-0 text-[color:var(--live)]">
             Steal open for Team {state?.phase?.team}
           </p>
         )}

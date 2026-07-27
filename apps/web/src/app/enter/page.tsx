@@ -69,7 +69,7 @@ export default function EnterPage() {
   if (done) {
     return (
       <main className="shell-light px-5 py-10 max-w-lg mx-auto flex flex-col gap-6">
-        <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--muted)]">
+        <Link href="/" className="eyebrow text-[color:var(--muted)]">
           BuzzKill
         </Link>
         <h1 className="display text-5xl m-0">You&apos;re in</h1>
@@ -98,7 +98,7 @@ export default function EnterPage() {
   return (
     <main className="shell-light px-5 py-10 max-w-lg mx-auto flex flex-col gap-6">
       <div>
-        <Link href="/" className="mono text-xs tracking-[0.18em] uppercase text-[color:var(--muted)]">
+        <Link href="/" className="eyebrow text-[color:var(--muted)]">
           BuzzKill
         </Link>
         <h1 className="display text-5xl mt-2 m-0">Enter</h1>

@@ -1,40 +1,28 @@
 import type { Metadata } from "next";
-import { Syne, Figtree, IBM_Plex_Mono, Press_Start_2P, Archivo_Black } from "next/font/google";
+import { Outfit, Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const syne = Syne({
-  variable: "--font-syne",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
-  weight: ["700", "800"],
+  weight: ["500", "600", "700", "800"],
 });
 
-const figtree = Figtree({
-  variable: "--font-figtree",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-const ibm = IBM_Plex_Mono({
-  variable: "--font-ibm",
+const jetbrains = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
 });
 
-const pressStart = Press_Start_2P({
-  variable: "--font-arcade",
-  subsets: ["latin"],
-  weight: ["400"],
-});
-
-const archivoBlack = Archivo_Black({
-  variable: "--font-punch",
-  subsets: ["latin"],
-  weight: ["400"],
-});
-
 export const metadata: Metadata = {
   title: "BuzzKill",
-  description: "A live team trivia league. Buzzers, steals, and the occasional ego check.",
+  description: "Live team trivia league — buzzers, steals, and season standings.",
 };
 
 export default function RootLayout({
@@ -44,9 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${syne.variable} ${figtree.variable} ${ibm.variable} ${pressStart.variable} ${archivoBlack.variable} antialiased`}
-      >
+      <body className={`${outfit.variable} ${manrope.variable} ${jetbrains.variable} antialiased`}>
         {children}
       </body>
     </html>
